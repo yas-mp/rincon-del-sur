@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -40,18 +41,26 @@ fun CampoContrasena(
         value = valor,
         onValueChange = onValorCambia,
         modifier = modifier.fillMaxWidth(),
-        placeholder = {Text(text = etiqueta, color = Color.White.copy(0.5f))},
+        textStyle = MaterialTheme.typography.bodyLarge.copy(
+            color = MaterialTheme.colorScheme.onSurface
+        ),
+        placeholder = {
+            Text(
+                text = etiqueta,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+            )},
         leadingIcon = {
             Icon(
                 painter = painterResource(R.drawable.cerrar),
                 contentDescription = null,
-                modifier = Modifier.size(Dimens.tamanoIcono)
+                modifier = Modifier.size(Dimens.tamanoIcono),
+                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
             )
         },
         trailingIcon = {
             IconButton(onClick = onAlternarContrasenaVisible) {
                 Icon(
-                    tint = Color.White,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     painter = painterResource(
                         if(visible) R.drawable.ic_ojo_tachado else R.drawable.ic_ojo
                     ),
@@ -64,7 +73,14 @@ fun CampoContrasena(
         },
         visualTransformation = if (visible) VisualTransformation.None else PasswordVisualTransformation(),
         isError = error!= null,
-        supportingText = { if(error != null) Text(error)},
+        supportingText = {
+            if(error != null) {
+                Text(
+                    text = error,
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
+        },
         singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
         shape = EstiloCampo.forma,
