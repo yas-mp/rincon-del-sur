@@ -18,7 +18,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -46,14 +45,17 @@ import com.example.tiendaretailsur.data.UsuarioDbHelper
 import com.example.tiendaretailsur.model.FormularioRegistroUiState
 import com.example.tiendaretailsur.model.RolUsuario
 import com.example.tiendaretailsur.ui.components.BotonPrincipal
-import com.example.tiendaretailsur.ui.components.CampoContrasena
 import com.example.tiendaretailsur.ui.components.CampoTexto
 import com.example.tiendaretailsur.ui.components.CampoTextoRut
-import com.example.tiendaretailsur.ui.components.CasillaConTexto
 import com.example.tiendaretailsur.ui.components.TituloScreen
 import com.example.tiendaretailsur.ui.theme.Dimens
 import com.example.tiendaretailsur.ui.theme.MiRegistroTheme
 import com.example.tiendaretailsur.viewmodel.FormularioRegistroViewModel
+import android.widget.Toast
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 
 @Composable
 fun FormularioRegistroScreen(
@@ -69,43 +71,29 @@ fun FormularioRegistroScreen(
 
     FormularioRegistroContent(
         uiState = uiState,
-        listaPreguntas = viewModel.listaPreguntasSeg,
         onRutCambia = viewModel::onRutCambia,
         onNombreCambia = viewModel::onNombreCambia,
         onCorreoCambia = viewModel::onCorreoCambia,
         onTelefonoCambia = viewModel::onTelefonoCambia,
-        onContrasenaCambia = viewModel::onContrasenaCambia,
-        onPreguntaSeleccionada = viewModel::onPreguntaSeleccionada,
-        onRespuestaCambia = viewModel::onRespuestaCambia,
-        onAlternarContrasenaVisible = viewModel::onAlternarContrasenaVisible,
         onSeleccionRol = viewModel::onSeleccionRol,
-        onTerminosCambia = viewModel::onTerminosCambia,
         onLimpiarFormulario = viewModel::onLimpiarFormulario,
         onRegistrar = viewModel::onRegistrar,
         onIrALoginClick = onIrALoginClick
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FormularioRegistroContent(
     uiState: FormularioRegistroUiState,
-    listaPreguntas: List<String> = emptyList(),
     onRutCambia: (String) -> Unit,
     onNombreCambia: (String) -> Unit,
     onCorreoCambia: (String) -> Unit,
     onTelefonoCambia: (String) -> Unit,
-    onContrasenaCambia: (String) -> Unit,
-    onPreguntaSeleccionada: (String) -> Unit = {},
-    onRespuestaCambia: (String) -> Unit = {},
-    onAlternarContrasenaVisible: () -> Unit,
     onSeleccionRol: (RolUsuario) -> Unit,
-    onTerminosCambia: (Boolean) -> Unit,
     onLimpiarFormulario: () -> Unit,
     onRegistrar: () -> Unit,
     onIrALoginClick: () -> Unit = {}
 ) {
-
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
@@ -116,7 +104,7 @@ fun FormularioRegistroContent(
                     start = Dimens.espacioPantalla,
                     end = Dimens.espacioPantalla,
                     top = innerPadding.calculateTopPadding() / 2,
-                    bottom = innerPadding.calculateTopPadding()
+                    bottom = innerPadding.calculateBottomPadding()
                 )
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.Top
@@ -208,86 +196,6 @@ fun FormularioRegistroContent(
             )
             Spacer(modifier = Modifier.height(Dimens.espacioInterno))
 
-            Text(
-                text = "Contraseña",
-                color = MaterialTheme.colorScheme.onBackground,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold
-            )
-            Spacer(modifier = Modifier.height(2.dp))
-            CampoContrasena(
-                valor = uiState.contrasena,
-                onValorCambia = onContrasenaCambia,
-                etiqueta = stringResource(R.string.campo_contrasena),
-                visible = uiState.contrasenaVisible,
-                onAlternarContrasenaVisible = onAlternarContrasenaVisible,
-                error = uiState.errorContrasena
-            )
-            Spacer(modifier = Modifier.height(Dimens.espacioInterno))
-
-            var preguntaAbierta by remember { mutableStateOf(false) }
-            Text(
-                text = "Pregunta de seguridad",
-                color = MaterialTheme.colorScheme.onBackground,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold
-            )
-            Spacer(modifier = Modifier.height(2.dp))
-
-            Box(modifier = Modifier.fillMaxWidth()) {
-                CampoTexto(
-                    valor = uiState.preguntaSeleccionada,
-                    onValorCambia = {},
-                    etiqueta = "Selecciona una pregunta",
-                    icono = R.drawable.ic_persona,
-                    error = uiState.errorPregunta
-                )
-                Box(
-                    modifier = Modifier
-                        .matchParentSize()
-                        .clickable { preguntaAbierta = true }
-                )
-                DropdownMenu(
-                    expanded = preguntaAbierta,
-                    onDismissRequest = { preguntaAbierta = false },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(MaterialTheme.colorScheme.surface)
-                ) {
-                    listaPreguntas.forEach { pregunta ->
-                        DropdownMenuItem(
-                            text = {
-                                Text(
-                                    text = pregunta,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                            },
-                            onClick = {
-                                onPreguntaSeleccionada(pregunta)
-                                preguntaAbierta = false
-                            }
-                        )
-                    }
-                }
-            }
-            Spacer(modifier = Modifier.height(Dimens.espacioInterno))
-
-            Text(
-                text = "Respuesta de seguridad",
-                color = MaterialTheme.colorScheme.onBackground,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold
-            )
-            Spacer(modifier = Modifier.height(2.dp))
-            CampoTexto(
-                valor = uiState.respuestaSeguridad,
-                onValorCambia = onRespuestaCambia,
-                etiqueta = "Tu respuesta",
-                icono = R.drawable.ic_persona,
-                error = uiState.errorRespuesta
-            )
-            Spacer(modifier = Modifier.height(Dimens.espacioInterno))
-
             var menuRolAbierto by remember { mutableStateOf(false) }
             Text(
                 text = "Selecciona el rol",
@@ -332,24 +240,7 @@ fun FormularioRegistroContent(
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(Dimens.espacioInterno))
-
-            Column {
-                CasillaConTexto(
-                    texto = stringResource(R.string.acepta_terminos),
-                    marcado = uiState.aceptarTerminos,
-                    onCambio = onTerminosCambia
-                )
-                uiState.errorTerminos?.let { mensaje ->
-                    Text(
-                        text = mensaje,
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.padding(start = Dimens.espacioPequeno)
-                    )
-                }
-            }
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
             Row(horizontalArrangement = Arrangement.spacedBy(Dimens.espacioInterno)) {
                 BotonPrincipal(
@@ -360,6 +251,8 @@ fun FormularioRegistroContent(
                 )
             }
             Spacer(modifier = Modifier.height(10.dp))
+            val clipboardManager = LocalClipboardManager.current
+            val context = LocalContext.current
 
             if (uiState.registroExitoso) {
                 AlertDialog(
@@ -377,10 +270,33 @@ fun FormularioRegistroContent(
                         )
                     },
                     text = {
-                        Text(
-                            text = "El colaborador ${uiState.nombre} ha sido registrado correctamente en el sistema.",
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text(
+                                text = "El colaborador ${uiState.nombre} ha sido registrado correctamente.",
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            SelectionContainer {
+                                Text(
+                                    text = "Contraseña temporal: ${uiState.contrasenaTemporalGenerada}",
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                            Text(
+                                text = "Compártela con el colaborador para que active su cuenta en su primer inicio de sesión.",
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    },
+                    dismissButton = {
+                        OutlinedButton(
+                            onClick = {
+                                clipboardManager.setText(AnnotatedString(uiState.contrasenaTemporalGenerada))
+                                Toast.makeText(context, "Contraseña temporal copiada", Toast.LENGTH_SHORT).show()
+                            }
+                        ) {
+                            Text("Copiar clave")
+                        }
                     },
                     confirmButton = {
                         Button(
@@ -412,10 +328,7 @@ fun FormularioRegistroContentPreview() {
             onNombreCambia = {},
             onCorreoCambia = {},
             onTelefonoCambia = {},
-            onContrasenaCambia = {},
             onSeleccionRol = {},
-            onAlternarContrasenaVisible = {},
-            onTerminosCambia = {},
             onRegistrar = {},
             onLimpiarFormulario = {},
             onIrALoginClick = {}
