@@ -55,10 +55,10 @@ import com.example.tiendaretailsur.data.ConvertidorImagen
 import com.example.tiendaretailsur.data.UsuarioDbHelper
 import com.example.tiendaretailsur.permisos.Permisos
 import com.example.tiendaretailsur.ui.components.AvatarCircular
+import com.example.tiendaretailsur.ui.components.CampoContrasena
 import com.example.tiendaretailsur.ui.theme.MiRegistroTheme
 import com.example.tiendaretailsur.viewmodel.PerfilViewModel
 import kotlinx.coroutines.launch
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -82,6 +82,13 @@ fun PerfilScreen(
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+
+    LaunchedEffect(uiState.mensajeSnackbar) {
+        uiState.mensajeSnackbar?.let { mensaje ->
+            snackbarHostState.showSnackbar(mensaje)
+            viewModel.onSnackbarMostrado()
+        }
+    }
 
     val foto = remember(uiState.avatarBytes) {
         uiState.avatarBytes?.let { bytes -> ConvertidorImagen.aBitmap(bytes)?.asImageBitmap() }
@@ -228,7 +235,7 @@ fun PerfilScreen(
                 ) {
                     Text(text = "Foto de Perfil", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     Text(
-                        text = if (isAdmin) "Como administrador, puedes actualizar tu foto y gestionar el perfil." else "Como colaborador, esta es la única sección que puedes modificar en tu perfil.",
+                        text = if (isAdmin) "Como administrador, puedes actualizar tu foto y gestionar el perfil." else "Actualiza tu fotografía de perfil desde la cámara o galería.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                     )
@@ -265,6 +272,61 @@ fun PerfilScreen(
                         ) {
                             Text("Galería")
                         }
+                    }
+                }
+            }
+
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(
+                        text = "Seguridad y Contraseña",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "Actualiza tu clave de acceso ingresando tu contraseña actual y una nueva.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                    )
+
+                    CampoContrasena(
+                        valor = uiState.contrasenaActual,
+                        onValorCambia = viewModel::onContrasenaActualCambia,
+                        etiqueta = "Contraseña actual",
+                        visible = uiState.contrasenaActualVisible,
+                        onAlternarContrasenaVisible = viewModel::onAlternarActualVisible,
+                        error = uiState.errorContrasenaActual
+                    )
+
+                    CampoContrasena(
+                        valor = uiState.nuevaContrasena,
+                        onValorCambia = viewModel::onNuevaContrasenaCambia,
+                        etiqueta = "Nueva contraseña",
+                        visible = uiState.nuevaContrasenaVisible,
+                        onAlternarContrasenaVisible = viewModel::onAlternarNuevaVisible,
+                        error = uiState.errorNuevaContrasena
+                    )
+
+                    CampoContrasena(
+                        valor = uiState.confirmarContrasena,
+                        onValorCambia = viewModel::onConfirmarContrasenaCambia,
+                        etiqueta = "Confirmar nueva contraseña",
+                        visible = uiState.confirmarContrasenaVisible,
+                        onAlternarContrasenaVisible = viewModel::onAlternarConfirmarVisible,
+                        error = uiState.errorConfirmarContrasena
+                    )
+
+                    Button(
+                        onClick = { viewModel.cambiarContrasena() },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Actualizar contraseña")
                     }
                 }
             }

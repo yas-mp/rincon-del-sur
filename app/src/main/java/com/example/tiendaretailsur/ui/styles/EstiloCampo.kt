@@ -5,42 +5,39 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextFieldDefaults.colors
 import androidx.compose.material3.TextFieldColors
 import androidx.compose.runtime.Composable
-import com.example.tiendaretailsur.ui.theme.CardClara
 import com.example.tiendaretailsur.ui.theme.Dimens
 import com.example.tiendaretailsur.ui.theme.ErrorColor
-import com.example.tiendaretailsur.ui.theme.GrisDeshabilitada
-import com.example.tiendaretailsur.ui.theme.TextoClaro
-
 
 object EstiloCampo {
     val forma = RoundedCornerShape(Dimens.radioCampo)
 
     @Composable
-    fun colores() : TextFieldColors = colors(
-        focusedContainerColor = CardClara,
-        unfocusedContainerColor = CardClara,
-        errorContainerColor = CardClara,
+    fun colores(): TextFieldColors = colors(
 
-        focusedBorderColor = MaterialTheme.colorScheme.onSurface,
-        unfocusedBorderColor = GrisDeshabilitada,
+        focusedContainerColor = MaterialTheme.colorScheme.surface,
+        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+        errorContainerColor = MaterialTheme.colorScheme.surface,
+
+        focusedBorderColor = MaterialTheme.colorScheme.primary,
+        unfocusedBorderColor = MaterialTheme.colorScheme.outline,
         errorBorderColor = ErrorColor,
 
-        focusedLeadingIconColor = TextoClaro,
-        unfocusedLeadingIconColor = TextoClaro,
+        focusedLeadingIconColor = MaterialTheme.colorScheme.primary,
+        unfocusedLeadingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
         errorLeadingIconColor = ErrorColor,
 
-        focusedTextColor = TextoClaro,
-        unfocusedTextColor = TextoClaro,
-        errorTextColor = TextoClaro,
+        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+        errorTextColor = MaterialTheme.colorScheme.onSurface,
 
-        focusedPlaceholderColor = TextoClaro.copy(0.7f),
-        unfocusedPlaceholderColor = TextoClaro.copy(0.7f),
-        focusedLabelColor = MaterialTheme.colorScheme.onSurface,
-        unfocusedLabelColor = MaterialTheme.colorScheme.onSurface,
-        cursorColor = MaterialTheme.colorScheme.onSurface,
+        focusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+        unfocusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+        focusedLabelColor = MaterialTheme.colorScheme.primary,
+        unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        cursorColor = MaterialTheme.colorScheme.primary,
 
-        focusedTrailingIconColor = MaterialTheme.colorScheme.onSurface
-
-
+        focusedTrailingIconColor = MaterialTheme.colorScheme.primary,
+        unfocusedTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        errorTrailingIconColor = ErrorColor
     )
 }

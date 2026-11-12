@@ -43,6 +43,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SelectableChipColors
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Tab
@@ -311,7 +312,7 @@ private fun SeccionColaboradoresContent(
                 FilterChip(
                     selected = uiState.filtroPerfil == codigo,
                     onClick = { onFiltroPerfilCambia(codigo) },
-                    label = { Text(if (codigo == "TODOS") "Todos los perfiles" else codigo) }
+                    label = { Text(if (codigo == "TODOS") "Todos los perfiles" else codigo) },
                 )
             }
         }
@@ -791,15 +792,6 @@ private fun DialogoEditarUsuario(
                     label = { Text("Teléfono") },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                OutlinedTextField(
-                    value = uiState.editNuevaContrasena,
-                    onValueChange = onNuevaContrasenaCambia,
-                    label = { Text("Nueva Contraseña (Opcional)") },
-                    singleLine = true,
-                    visualTransformation = PasswordVisualTransformation(),
                     modifier = Modifier.fillMaxWidth()
                 )
 

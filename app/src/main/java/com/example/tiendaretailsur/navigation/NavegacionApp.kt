@@ -24,6 +24,7 @@ import com.example.tiendaretailsur.ui.screens.FormularioRegistroScreen
 import com.example.tiendaretailsur.ui.screens.LoginScreen
 import com.example.tiendaretailsur.ui.screens.MenuPrincipalScreen
 import com.example.tiendaretailsur.ui.screens.PerfilScreen
+import com.example.tiendaretailsur.ui.screens.PrimerIngresoScreen
 import com.example.tiendaretailsur.ui.screens.RecuperarContrasenaScreen
 import com.example.tiendaretailsur.ui.theme.MiRegistroTheme
 
@@ -52,7 +53,12 @@ fun NavegacionApp(initialDarkTheme: Boolean = isSystemInDarkTheme()) {
                         onLoginSuccess = { usuarioAutenticado ->
                             correoUsuarioLogueado = usuarioAutenticado.correo
                             isAdmin = usuarioAutenticado.perfil in listOf("P-01", "P-02", "SUBGERENTE")
-                            navController.navigate(Ruta.MenuPrincipal.ruta) {
+                            val destino = if (usuarioAutenticado.debeCambiarContrasena) {
+                                Ruta.PrimerIngreso.ruta
+                            } else {
+                                Ruta.MenuPrincipal.ruta
+                            }
+                            navController.navigate(destino) {
                                 popUpTo(Ruta.Login.ruta) { inclusive = true }
                             }
                         },
@@ -61,6 +67,17 @@ fun NavegacionApp(initialDarkTheme: Boolean = isSystemInDarkTheme()) {
                         },
                         onCrearCuentaClick = {
                             navController.navigate(Ruta.FormularioRegistro.ruta)
+                        }
+                    )
+                }
+                composable(Ruta.PrimerIngreso.ruta) {
+                    PrimerIngresoScreen(
+                        rutOCorreoUsuario = correoUsuarioLogueado,
+                        dbHelper = dbHelper,
+                        onConfiguracionCompletada = {
+                            navController.navigate(Ruta.MenuPrincipal.ruta) {
+                                popUpTo(Ruta.PrimerIngreso.ruta) { inclusive = true }
+                            }
                         }
                     )
                 }

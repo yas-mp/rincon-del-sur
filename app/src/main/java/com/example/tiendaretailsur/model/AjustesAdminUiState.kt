@@ -2,7 +2,7 @@ package com.example.tiendaretailsur.model
 
 enum class SeccionAjustesAdmin(val titulo: String) {
     COLABORADORES("Colaboradores"),
-    PERFILES("Perfiles App"),
+    PERFILES("Perfiles"),
     TIENDA("Tienda y Cuenta")
 }
 

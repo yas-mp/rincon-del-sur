@@ -16,8 +16,22 @@ class RecuperarContrasenaViewModel(
     private val _uiState = MutableStateFlow(RecuperarContrasenaUiState())
     val uiState: StateFlow<RecuperarContrasenaUiState> = _uiState.asStateFlow()
 
+    val listaPreguntasSeg = listOf(
+        "¿Cuál es el nombre de tu primera mascota?",
+        "¿En qué ciudad naciste?",
+        "¿Cuál es tu deporte o pasatiempo favorito?",
+        "¿Cómo se llamaba tu colegio básico?",
+        "¿Cuál es tu comida favorita?"
+    )
+
+    private var preguntaGuardadaReal: String = ""
+
     fun onIdentificadorCambia(valor: String) {
         _uiState.update { it.copy(identificadorUsuario = valor, errorUsuario = null) }
+    }
+
+    fun onPregunta1Seleccionada(pregunta: String) {
+        _uiState.update { it.copy(pregunta1 = pregunta, errorRespuesta1 = null) }
     }
 
     fun onRespuesta1Cambia(valor: String) {
@@ -47,34 +61,42 @@ class RecuperarContrasenaViewModel(
         }
 
         val pregunta = dbHelper.obtenerPreguntaSeguridad(identificador)
-        if (pregunta != null) {
+        if (!pregunta.isNullOrBlank()) {
+            preguntaGuardadaReal = pregunta
             _uiState.update {
                 it.copy(
                     pasoActual = PasoRecuperacion.PREGUNTAS_SEGURIDAD,
                     correoUsuarioEncontrado = identificador,
-                    pregunta1 = pregunta,
+                    pregunta1 = "",
+                    respuesta1 = "",
                     errorUsuario = null
                 )
             }
         } else {
             _uiState.update {
-                it.copy(errorUsuario = "No se encontró ningún colaborador con ese correo o RUT")
+                it.copy(errorUsuario = "No se encontró ningún colaborador con ese correo o RUT, o aún no activa su cuenta")
             }
         }
     }
     fun verificarRespuestas() {
         val estado = _uiState.value
         val identificador = estado.correoUsuarioEncontrado.trim()
+        val preguntaElegida = estado.pregunta1.trim()
         val respuestaIngresada = estado.respuesta1.trim()
 
+        if (preguntaElegida.isBlank()) {
+            _uiState.update { it.copy(errorRespuesta1 = "Selecciona tu pregunta de seguridad") }
+            return
+        }
         if (respuestaIngresada.isBlank()) {
             _uiState.update { it.copy(errorRespuesta1 = "Ingresa tu respuesta de seguridad") }
             return
         }
 
-        val esCorrecta = dbHelper.verificarRespuesta(identificador, respuestaIngresada)
+        val preguntaCoincide = preguntaElegida.equals(preguntaGuardadaReal.trim(), ignoreCase = true)
+        val respuestaCorrecta = dbHelper.verificarRespuesta(identificador, respuestaIngresada)
 
-        if (esCorrecta) {
+        if (preguntaCoincide && respuestaCorrecta) {
             _uiState.update {
                 it.copy(
                     pasoActual = PasoRecuperacion.CAMBIAR_CONTRASENA,
@@ -83,7 +105,7 @@ class RecuperarContrasenaViewModel(
             }
         } else {
             _uiState.update {
-                it.copy(errorRespuesta1 = "Respuesta de seguridad incorrecta")
+                it.copy(errorRespuesta1 = "La pregunta o respuesta de seguridad no coinciden")
             }
         }
     }

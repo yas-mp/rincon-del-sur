@@ -10,6 +10,7 @@ data class Usuario(
     val telefono: String = "",
     val passwordHash: String = "",
     val activo: Boolean = true,
+    val debeCambiarContrasena: Boolean = false,
     val preguntaSeguridad1: String = "",
     val respuestaHash1: String = "",
     val preguntaSeguridad2: String = "",
