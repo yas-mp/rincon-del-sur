@@ -56,6 +56,7 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
+import com.example.tiendaretailsur.ui.components.CasillaConTexto
 
 @Composable
 fun FormularioRegistroScreen(
@@ -76,6 +77,7 @@ fun FormularioRegistroScreen(
         onCorreoCambia = viewModel::onCorreoCambia,
         onTelefonoCambia = viewModel::onTelefonoCambia,
         onSeleccionRol = viewModel::onSeleccionRol,
+        onTerminosCambia = viewModel::onTerminosCambia,
         onLimpiarFormulario = viewModel::onLimpiarFormulario,
         onRegistrar = viewModel::onRegistrar,
         onIrALoginClick = onIrALoginClick
@@ -90,6 +92,7 @@ fun FormularioRegistroContent(
     onCorreoCambia: (String) -> Unit,
     onTelefonoCambia: (String) -> Unit,
     onSeleccionRol: (RolUsuario) -> Unit,
+    onTerminosCambia: (Boolean) -> Unit,
     onLimpiarFormulario: () -> Unit,
     onRegistrar: () -> Unit,
     onIrALoginClick: () -> Unit = {}
@@ -240,6 +243,21 @@ fun FormularioRegistroContent(
                     }
                 }
             }
+            Column {
+                CasillaConTexto(
+                    texto = stringResource(R.string.acepta_terminos),
+                    marcado = uiState.aceptarTerminos,
+                    onCambio = onTerminosCambia
+                )
+                uiState.errorTerminos?.let { mensaje ->
+                    Text(
+                        text = mensaje,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(start = Dimens.espacioPequeno)
+                    )
+                }
+            }
             Spacer(modifier = Modifier.height(20.dp))
 
             Row(horizontalArrangement = Arrangement.spacedBy(Dimens.espacioInterno)) {
@@ -272,7 +290,7 @@ fun FormularioRegistroContent(
                     text = {
                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text(
-                                text = "El colaborador ${uiState.nombre} ha sido registrado correctamente.",
+                                text = "El ${uiState.rolSeleccionado} ${uiState.nombre} ha sido registrado correctamente.",
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             SelectionContainer {
@@ -329,6 +347,7 @@ fun FormularioRegistroContentPreview() {
             onCorreoCambia = {},
             onTelefonoCambia = {},
             onSeleccionRol = {},
+            onTerminosCambia = {},
             onRegistrar = {},
             onLimpiarFormulario = {},
             onIrALoginClick = {}
