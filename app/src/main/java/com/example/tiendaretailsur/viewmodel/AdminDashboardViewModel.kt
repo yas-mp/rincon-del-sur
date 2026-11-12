@@ -27,7 +27,7 @@ class AdminDashboardViewModel(
                 id = (index + 1).toLong(),
                 observador = conteo.observador,
                 hora = conteo.hora,
-                conteo = conteo.cantidadClientes,
+                conteo = conteo.cantidadClientes + conteo.cantidadTransito,
                 estado = 1
             )
         }
