@@ -14,6 +14,7 @@ data class AjustesAdminUiState(
     val usuarios: List<Usuario> = emptyList(),
     val perfiles: List<ConfiguracionPerfil> = emptyList(),
     val accesos: List<ConfiguracionAcceso> = emptyList(),
+    val solicitudesCorreo: List<SolicitudCorreo> = emptyList(),
     val metaConversionTexto: String = "10.0",
 
     val usuarioEnEdicion: Usuario? = null,

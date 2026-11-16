@@ -17,8 +17,13 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Badge
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonColors
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -27,11 +32,13 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -156,7 +163,10 @@ fun PerfilScreen(
                 title = { Text(if (isAdmin) "Perfil de Administrador" else "Perfil de Colaborador") },
                 navigationIcon = {
                     IconButton(onClick = onVolver) {
-                        Icon(painter = painterResource(R.drawable.atras), contentDescription = "Volver")
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Volver al panel"
+                        )
                     }
                 }
             )
@@ -220,6 +230,25 @@ fun PerfilScreen(
                         Text(text = "Turno asignado:", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
                         Badge(containerColor = MaterialTheme.colorScheme.primary) {
                             Text(text = perfil.turno, color = MaterialTheme.colorScheme.onPrimary)
+                        }
+                    }
+
+                    HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
+
+                    if (uiState.tieneSolicitudCorreoPendiente) {
+                        Text(
+                            text = "Tienes una solicitud de cambio de correo pendiente de aprobación por el Subgerente.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Medium
+                        )
+                    } else {
+                        OutlinedButton(
+                            onClick = { viewModel.abrirDialogoCorreo() },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(MaterialTheme.colorScheme.onSurface)
+                        ) {
+                            Text("Solicitar cambio de correo")
                         }
                     }
                 }
@@ -346,6 +375,55 @@ fun PerfilScreen(
                     }
                 }
             }
+        }
+
+        if (uiState.dialogoCorreoAbierto) {
+            AlertDialog(
+                onDismissRequest = viewModel::cerrarDialogoCorreo,
+                title = { Text("Solicitar Cambio de Correo") },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text(
+                            text = "Por seguridad, el correo no se edita directamente. Tu solicitud será revisada por el Subgerente.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        OutlinedTextField(
+                            value = perfil.correo,
+                            onValueChange = {},
+                            enabled = false,
+                            label = { Text("Correo actual") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = uiState.nuevoCorreoSolicitado,
+                            onValueChange = viewModel::onNuevoCorreoSolicitadoCambia,
+                            label = { Text("Nuevo correo electrónico") },
+                            isError = uiState.errorNuevoCorreo != null,
+                            supportingText = {
+                                uiState.errorNuevoCorreo?.let { Text(it) }
+                            },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = uiState.motivoCorreoSolicitado,
+                            onValueChange = viewModel::onMotivoCorreoCambia,
+                            label = { Text("Motivo (opcional)") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                },
+                confirmButton = {
+                    Button(onClick = viewModel::enviarSolicitudCambioCorreo) {
+                        Text("Enviar Solicitud")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = viewModel::cerrarDialogoCorreo) {
+                        Text("Cancelar")
+                    }
+                }
+            )
         }
     }
 }

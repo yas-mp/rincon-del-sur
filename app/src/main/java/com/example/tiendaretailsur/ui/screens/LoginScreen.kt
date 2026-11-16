@@ -54,6 +54,7 @@ import com.example.tiendaretailsur.R
 import com.example.tiendaretailsur.data.UsuarioDbHelper
 import com.example.tiendaretailsur.model.LoginUiState
 import com.example.tiendaretailsur.model.Usuario
+import com.example.tiendaretailsur.ui.styles.EstiloCampo.colores
 import com.example.tiendaretailsur.ui.theme.Dimens
 import com.example.tiendaretailsur.ui.theme.Exito
 import com.example.tiendaretailsur.ui.theme.ExitoFondo
@@ -441,12 +442,13 @@ fun LoginContent(
 
 @Composable
 private fun MensajeLoginExitoso(usuario: Usuario) {
+    val colores = MaterialTheme.colorScheme
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(
-            containerColor = ExitoFondo,
-            contentColor = Exito
+            containerColor = colores.surfaceVariant,
+            contentColor = colores.surfaceVariant
         )
     ) {
         Row(
@@ -458,7 +460,7 @@ private fun MensajeLoginExitoso(usuario: Usuario) {
             Icon(
                 painter = painterResource(id = R.drawable.ic_check),
                 contentDescription = null,
-                tint = Exito,
+                tint = colores.primary,
                 modifier = Modifier.size(Dimens.tamanoIcono)
             )
             Spacer(modifier = Modifier.width(Dimens.espacioMedio))
@@ -466,12 +468,12 @@ private fun MensajeLoginExitoso(usuario: Usuario) {
                 Text(
                     text = "Acceso autorizado: ${usuario.nombreCompleto}",
                     style = MaterialTheme.typography.titleMedium,
-                    color = Exito
+                    color = colores.onSurfaceVariant
                 )
                 Text(
                     text = "• Perfil ${usuario.perfil} (RUT: ${usuario.rut})",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onPrimary
+                    color = colores.onSurfaceVariant.copy(alpha = 0.8f)
                 )
             }
         }

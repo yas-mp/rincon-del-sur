@@ -33,10 +33,20 @@ fun NavegacionApp(initialDarkTheme: Boolean = isSystemInDarkTheme()) {
     var isAdmin by rememberSaveable { mutableStateOf(true) }
     var isDarkTheme by rememberSaveable { mutableStateOf(initialDarkTheme) }
     var correoUsuarioLogueado by rememberSaveable { mutableStateOf("admin@rincondelsur.cl") }
+    var nombreUsuarioLogueado by rememberSaveable { mutableStateOf("") }
+    var perfilUsuarioLogueado by rememberSaveable { mutableStateOf("") }
 
     val context = LocalContext.current
     val dbHelper = remember { UsuarioDbHelper(context) }
     val navController = rememberNavController()
+
+    fun destinoPorRol(perfil: String): String {
+        return when (perfil.uppercase()) {
+            "P-01", "JEFA_TIENDA", "P-03", "SUPERVISOR" -> Ruta.AdminPanel.ruta
+            "P-02", "SUBGERENTE" -> Ruta.AjustesAdmin.ruta
+            else -> Ruta.MenuPrincipal.ruta
+        }
+    }
 
     MiRegistroTheme(darkTheme = isDarkTheme) {
         Scaffold(
@@ -52,11 +62,15 @@ fun NavegacionApp(initialDarkTheme: Boolean = isSystemInDarkTheme()) {
                         dbHelper = dbHelper,
                         onLoginSuccess = { usuarioAutenticado ->
                             correoUsuarioLogueado = usuarioAutenticado.correo
-                            isAdmin = usuarioAutenticado.perfil in listOf("P-01", "P-02", "SUBGERENTE")
+                            nombreUsuarioLogueado = usuarioAutenticado.nombreCompleto
+                            perfilUsuarioLogueado = usuarioAutenticado.perfil
+                            isAdmin = usuarioAutenticado.perfil.uppercase() in listOf(
+                                "P-01", "JEFA_TIENDA", "P-02", "SUBGERENTE", "P-03", "SUPERVISOR"
+                            )
                             val destino = if (usuarioAutenticado.debeCambiarContrasena) {
                                 Ruta.PrimerIngreso.ruta
                             } else {
-                                Ruta.MenuPrincipal.ruta
+                                destinoPorRol(usuarioAutenticado.perfil)
                             }
                             navController.navigate(destino) {
                                 popUpTo(Ruta.Login.ruta) { inclusive = true }
@@ -70,12 +84,13 @@ fun NavegacionApp(initialDarkTheme: Boolean = isSystemInDarkTheme()) {
                         }
                     )
                 }
+
                 composable(Ruta.PrimerIngreso.ruta) {
                     PrimerIngresoScreen(
                         rutOCorreoUsuario = correoUsuarioLogueado,
                         dbHelper = dbHelper,
                         onConfiguracionCompletada = {
-                            navController.navigate(Ruta.MenuPrincipal.ruta) {
+                            navController.navigate(destinoPorRol(perfilUsuarioLogueado)) {
                                 popUpTo(Ruta.PrimerIngreso.ruta) { inclusive = true }
                             }
                         }
@@ -103,8 +118,12 @@ fun NavegacionApp(initialDarkTheme: Boolean = isSystemInDarkTheme()) {
                 }
 
                 composable(Ruta.MenuPrincipal.ruta) {
+                    val nombreReal = nombreUsuarioLogueado.ifBlank {
+                        dbHelper.obtenerUsuarioPorCorreo(correoUsuarioLogueado)?.nombreCompleto ?: ""
+                    }
                     MenuPrincipalScreen(
                         isAdmin = isAdmin,
+                        nombreUsuario = nombreReal,
                         onIrAdminDashboard = {
                             navController.navigate(Ruta.AdminPanel.ruta)
                         },
@@ -123,6 +142,7 @@ fun NavegacionApp(initialDarkTheme: Boolean = isSystemInDarkTheme()) {
                     PerfilScreen(
                         isAdmin = isAdmin,
                         correoLogueado = correoUsuarioLogueado,
+                        dbHelper = dbHelper,
                         onVolver = {
                             navController.popBackStack()
                         }
@@ -130,14 +150,30 @@ fun NavegacionApp(initialDarkTheme: Boolean = isSystemInDarkTheme()) {
                 }
 
                 composable(Ruta.FormularioConteo.ruta) {
-                    FormularioConteoScreen()
+                    val nombreReal = nombreUsuarioLogueado.ifBlank {
+                        dbHelper.obtenerUsuarioPorCorreo(correoUsuarioLogueado)?.nombreCompleto
+                            ?: "Observador en turno"
+                    }
+                    FormularioConteoScreen(
+                        nombreObservador = nombreReal,
+                        onVolver = {
+                            navController.popBackStack()
+                        }
+                    )
                 }
 
                 composable(Ruta.AdminPanel.ruta) {
+                    val esSupervisor = perfilUsuarioLogueado.uppercase() in listOf("P-03", "SUPERVISOR")
                     AdminDashboardScreen(
                         dbHelper = dbHelper,
-                        onVolverInicio = { navController.navigate(Ruta.MenuPrincipal.ruta) },
-                        onAjustes = { navController.navigate(Ruta.AjustesAdmin.ruta) },
+                        esSupervisor = esSupervisor,
+                        mostrarAjustesAdmin = false,
+                        onVolverInicio = {
+                            navController.navigate(Ruta.AdminPanel.ruta) { launchSingleTop = true }
+                        },
+                        onAjustes = {
+                            navController.navigate(Ruta.Perfil.ruta)
+                        },
                         onCerrarSesionClick = {
                             navController.navigate(Ruta.Login.ruta) {
                                 popUpTo(0) { inclusive = true }
@@ -150,9 +186,18 @@ fun NavegacionApp(initialDarkTheme: Boolean = isSystemInDarkTheme()) {
                     AjustesAdminScreen(
                         dbHelper = dbHelper,
                         seccionInicial = SeccionAjustesAdmin.COLABORADORES,
-                        onVolverClick = { navController.popBackStack() },
+                        onVolverClick = {
+                            navController.navigate(Ruta.Login.ruta) {
+                                popUpTo(0) { inclusive = true }
+                            }
+                        },
                         onIrAMiPerfilClick = { navController.navigate(Ruta.Perfil.ruta) },
-                        onIrARegistroColaborador = { navController.navigate(Ruta.FormularioRegistro.ruta)}
+                        onIrARegistroColaborador = { navController.navigate(Ruta.FormularioRegistro.ruta) },
+                        onCerrarSesionClick = {
+                            navController.navigate(Ruta.Login.ruta) {
+                                popUpTo(0) { inclusive = true }
+                            }
+                        }
                     )
                 }
             }

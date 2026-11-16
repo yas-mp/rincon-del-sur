@@ -61,6 +61,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun MenuPrincipalScreen(
     isAdmin: Boolean = true,
+    nombreUsuario: String = "",
     modifier: Modifier = Modifier,
     viewModel: MenuPrincipalViewModel = viewModel(),
     onIrAdminDashboard: () -> Unit = {},
@@ -80,7 +81,16 @@ fun MenuPrincipalScreen(
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
-            ModalDrawerSheet {
+            ModalDrawerSheet(
+                drawerContainerColor = MaterialTheme.colorScheme.surface
+            ) {
+                val coloresItemDrawer = NavigationDrawerItemDefaults.colors(
+                    selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.16f),
+                    selectedIconColor = MaterialTheme.colorScheme.primary,
+                    selectedTextColor = MaterialTheme.colorScheme.primary,
+                    unselectedIconColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f),
+                    unselectedTextColor = MaterialTheme.colorScheme.onSurface
+                )
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -106,8 +116,12 @@ fun MenuPrincipalScreen(
                     label = { Text("Menú Principal") },
                     icon = { Icon(Icons.Default.Home, contentDescription = null) },
                     selected = true,
-                    onClick = { scope.launch { drawerState.close() } },
-                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                    onClick = {
+                        accesoSeleccionado = null
+                        scope.launch { drawerState.close() }
+                    },
+                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
+                    colors = coloresItemDrawer
                 )
                 NavigationDrawerItem(
                     label = { Text("Mi Perfil") },
@@ -117,7 +131,8 @@ fun MenuPrincipalScreen(
                         scope.launch { drawerState.close() }
                         onIrPerfil()
                     },
-                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
+                    colors = coloresItemDrawer
                 )
                 if (isAdmin) {
                     NavigationDrawerItem(
@@ -128,7 +143,8 @@ fun MenuPrincipalScreen(
                             scope.launch { drawerState.close() }
                             onIrAdminDashboard()
                         },
-                        modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                        modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
+                        colors = coloresItemDrawer
                     )
                 }
                 HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
@@ -141,7 +157,8 @@ fun MenuPrincipalScreen(
                         scope.launch { drawerState.close() }
                         onCerrarSesion()
                     },
-                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
+                    colors = coloresItemDrawer
                 )
             }
         }
@@ -327,7 +344,7 @@ fun MenuPrincipalScreen(
                     ) {
                         item {
                             UserHeader(
-                                userName = "Colaborador",
+                                userName = nombreUsuario.ifBlank { "Colaborador" },
                                 title = "Selección de Acceso",
                                 avatarBytes = uiState.avatarBytes
                             )
@@ -349,6 +366,10 @@ fun MenuPrincipalScreen(
                             Card(
                                 onClick = { accesoSeleccionado = acceso.id },
                                 modifier = Modifier.fillMaxWidth(),
+                                elevation = CardDefaults.cardElevation(
+                                    defaultElevation = 4.dp,
+                                    pressedElevation = 1.dp
+                                ),
                                 colors = CardDefaults.cardColors(
                                     containerColor = if (esSeleccionado) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
                                     contentColor = if (esSeleccionado) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
@@ -387,6 +408,7 @@ fun MenuPrincipalScreen(
                     Box(modifier = Modifier.padding(innerPadding)) {
                         FormularioConteoScreen(
                             puertaInicial = accesoSeleccionado!!,
+                            nombreObservador = nombreUsuario,
                             modifier = modifier,
                             onVolver = { accesoSeleccionado = null }
                         )

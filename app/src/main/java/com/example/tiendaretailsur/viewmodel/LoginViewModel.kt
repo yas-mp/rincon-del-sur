@@ -48,6 +48,17 @@ class LoginViewModel(
         val usuario = dbHelper.autenticarUsuario(correoOIdentificador, contrasena)
 
         if (usuario != null) {
+            if (!usuario.activo) {
+                _uiState.update {
+                    it.copy(
+                        loginExitoso = false,
+                        usuarioAutenticado = null,
+                        errorContrasena = "Tu cuenta se encuentra deshabilitada. Contacta a Administración."
+                    )
+                }
+                return
+            }
+
             _uiState.update {
                 it.copy(
                     loginExitoso = true,

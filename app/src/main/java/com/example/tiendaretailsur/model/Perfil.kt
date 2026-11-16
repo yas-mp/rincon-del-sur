@@ -19,5 +19,10 @@ data class PerfilUiState(
     val errorContrasenaActual: String? = null,
     val errorNuevaContrasena: String? = null,
     val errorConfirmarContrasena: String? = null,
-    val mensajeSnackbar: String? = null
+    val mensajeSnackbar: String? = null,
+    val dialogoCorreoAbierto: Boolean = false,
+    val nuevoCorreoSolicitado: String = "",
+    val motivoCorreoSolicitado: String = "",
+    val errorNuevoCorreo: String? = null,
+    val tieneSolicitudCorreoPendiente: Boolean = false
 )

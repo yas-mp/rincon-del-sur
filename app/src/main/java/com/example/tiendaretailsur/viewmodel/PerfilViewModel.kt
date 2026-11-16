@@ -13,6 +13,7 @@ class PerfilViewModel(
     private val dbHelper: UsuarioDbHelper
 ) : ViewModel() {
     private var correoUsuario: String = "admin@rincondelsur.cl"
+    private var rutUsuario: String = ""
     private val _uiState = MutableStateFlow(PerfilUiState())
     val uiState: StateFlow<PerfilUiState> = _uiState.asStateFlow()
 
@@ -28,12 +29,23 @@ class PerfilViewModel(
         } catch (e: Exception) {
             null
         }
+        rutUsuario = usuario?.rut ?: ""
+
+        val tienePendiente = try {
+            if (rutUsuario.isNotBlank()) {
+                dbHelper.listarSolicitudesCorreoPendientes().any { it.rutUsuario == rutUsuario }
+            } else {
+                false
+            }
+        } catch (e: Exception) {
+            false
+        }
 
         val perfilTienda = if (usuario != null) {
             Perfil(
                 nombre = usuario.nombreCompleto,
                 correo = usuario.correo,
-                turno = if (usuario.perfil in listOf("P-01", "P-02", "SUBGERENTE")) "N/A" else "Turno Diurno",
+                turno = if (usuario.perfil in listOf("P-01", "P-02", "JEFA_TIENDA", "SUBGERENTE")) "N/A" else "Turno Diurno",
                 cargo = usuario.perfil
             )
         } else {
@@ -44,7 +56,80 @@ class PerfilViewModel(
                 cargo = "SUBGERENTE"
             )
         }
-        _uiState.update { it.copy(perfil = perfilTienda, avatarBytes = usuario?.avatar) }
+        _uiState.update {
+            it.copy(
+                perfil = perfilTienda,
+                avatarBytes = usuario?.avatar,
+                tieneSolicitudCorreoPendiente = tienePendiente
+            )
+        }
+    }
+
+    fun abrirDialogoCorreo() {
+        _uiState.update {
+            it.copy(
+                dialogoCorreoAbierto = true,
+                nuevoCorreoSolicitado = "",
+                motivoCorreoSolicitado = "",
+                errorNuevoCorreo = null
+            )
+        }
+    }
+
+    fun cerrarDialogoCorreo() {
+        _uiState.update { it.copy(dialogoCorreoAbierto = false, errorNuevoCorreo = null) }
+    }
+
+    fun onNuevoCorreoSolicitadoCambia(valor: String) {
+        _uiState.update { it.copy(nuevoCorreoSolicitado = valor, errorNuevoCorreo = null) }
+    }
+
+    fun onMotivoCorreoCambia(valor: String) {
+        _uiState.update { it.copy(motivoCorreoSolicitado = valor) }
+    }
+
+    fun enviarSolicitudCambioCorreo() {
+        val estado = _uiState.value
+        val nuevoCorreo = estado.nuevoCorreoSolicitado.trim()
+        val motivo = estado.motivoCorreoSolicitado.trim()
+
+        if (nuevoCorreo.isBlank() || !nuevoCorreo.contains("@") || !nuevoCorreo.contains(".")) {
+            _uiState.update { it.copy(errorNuevoCorreo = "Ingresa un correo electrónico válido") }
+            return
+        }
+        if (nuevoCorreo.equals(estado.perfil.correo, ignoreCase = true)) {
+            _uiState.update { it.copy(errorNuevoCorreo = "El nuevo correo debe ser distinto al actual") }
+            return
+        }
+
+        val ok = try {
+            dbHelper.crearSolicitudCorreo(
+                rutUsuario = rutUsuario.ifBlank { estado.perfil.correo },
+                nombreUsuario = estado.perfil.nombre,
+                correoActual = estado.perfil.correo,
+                correoNuevo = nuevoCorreo,
+                motivo = motivo
+            ) > 0
+        } catch (e: Exception) {
+            false
+        }
+
+        if (ok) {
+            _uiState.update {
+                it.copy(
+                    dialogoCorreoAbierto = false,
+                    tieneSolicitudCorreoPendiente = true,
+                    mensajeSnackbar = "Solicitud enviada al Subgerente para aprobación"
+                )
+            }
+        } else {
+            _uiState.update {
+                it.copy(
+                    dialogoCorreoAbierto = false,
+                    mensajeSnackbar = "No se pudo registrar la solicitud de correo"
+                )
+            }
+        }
     }
 
     fun setAvatarBytes(bytes: ByteArray?) {

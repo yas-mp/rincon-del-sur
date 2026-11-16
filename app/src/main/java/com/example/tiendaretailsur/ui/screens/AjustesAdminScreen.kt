@@ -1,5 +1,6 @@
 package com.example.tiendaretailsur.ui.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -19,31 +20,39 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Store
+import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.NavigationDrawerItem
+import androidx.compose.material3.NavigationDrawerItemDefaults
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SelectableChipColors
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Tab
@@ -51,9 +60,12 @@ import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -70,11 +82,12 @@ import com.example.tiendaretailsur.model.AjustesAdminUiState
 import com.example.tiendaretailsur.model.ConfiguracionAcceso
 import com.example.tiendaretailsur.model.ConfiguracionPerfil
 import com.example.tiendaretailsur.model.SeccionAjustesAdmin
+import com.example.tiendaretailsur.model.SolicitudCorreo
 import com.example.tiendaretailsur.model.Usuario
 import com.example.tiendaretailsur.permisos.Permisos
 import com.example.tiendaretailsur.ui.theme.Exito
-import com.example.tiendaretailsur.ui.theme.ExitoFondo
 import com.example.tiendaretailsur.viewmodel.AjustesAdminViewModel
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -88,159 +101,217 @@ fun AjustesAdminScreen(
     ),
     onVolverClick: () -> Unit = {},
     onIrAMiPerfilClick: () -> Unit = {},
-    onIrARegistroColaborador: () -> Unit = {}
+    onIrARegistroColaborador: () -> Unit = {},
+    onCerrarSesionClick: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(seccionInicial) {
         viewModel.seleccionarSeccion(seccionInicial)
         viewModel.recargarDatos()
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text(
-                            text = "Ajustes de Administrador",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = "Gestión de perfiles, colaboradores y tienda",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.75f)
-                        )
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = onVolverClick) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Volver al panel"
-                        )
-                    }
-                }
-            )
-        }
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-        ) {
-            TabRow(
-                selectedTabIndex = uiState.seccionActual.ordinal,
-                containerColor = MaterialTheme.colorScheme.surface
-            ) {
-                SeccionAjustesAdmin.entries.forEach { seccion ->
-                    val icono = when (seccion) {
-                        SeccionAjustesAdmin.COLABORADORES -> Icons.Default.People
-                        SeccionAjustesAdmin.PERFILES -> Icons.Default.Settings
-                        SeccionAjustesAdmin.TIENDA -> Icons.Default.Store
-                    }
-                    Tab(
-                        selected = uiState.seccionActual == seccion,
-                        onClick = { viewModel.seleccionarSeccion(seccion) },
-                        text = { Text(seccion.titulo) },
-                        icon = { Icon(icono, contentDescription = null) }
-                    )
-                }
-            }
-            uiState.mensajeConfirmacion?.let { mensaje ->
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = ExitoFondo,
-                        contentColor = Exito
-                    )
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Icon(Icons.Default.Check, contentDescription = null, tint = Exito)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = mensaje,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = Exito
-                            )
-                        }
-                        TextButton(onClick = { viewModel.limpiarMensaje() }) {
-                            Text("OK", color = Exito)
-                        }
-                    }
-                }
-            }
-            when (uiState.seccionActual) {
-                SeccionAjustesAdmin.COLABORADORES -> {
-                    SeccionColaboradoresContent(
-                        uiState = uiState,
-                        onBusquedaCambia = viewModel::onBusquedaCambia,
-                        onFiltroPerfilCambia = viewModel::onFiltroPerfilCambia,
-                        onAlternarActivo = viewModel::alternarEstadoUsuario,
-                        onEditarClick = viewModel::abrirEditorUsuario,
-                        onIrARegistroColaborador = onIrARegistroColaborador
-                    )
-                }
-                SeccionAjustesAdmin.PERFILES -> {
-                    SeccionPerfilesContent(
-                        perfiles = uiState.perfiles,
-                        usuarios = uiState.usuarios,
-                        onAlternarPerfil = viewModel::alternarEstadoPerfil,
-                        onEditarPerfilClick = viewModel::abrirEditorPerfil
-                    )
-                }
-                SeccionAjustesAdmin.TIENDA -> {
-                    SeccionTiendaYCuentaContent(
-                        metaConversionTexto = uiState.metaConversionTexto,
-                        onMetaCambia = viewModel::onMetaConversionCambia,
-                        onGuardarMeta = viewModel::guardarMetaConversion,
-                        accesos = uiState.accesos,
-                        onAlternarAcceso = viewModel::alternarEstadoAcceso,
-                        onIrAMiPerfilClick = onIrAMiPerfilClick
-                    )
-                }
-            }
-        }
-        if (uiState.usuarioEnEdicion != null) {
-            DialogoEditarUsuario(
-                uiState = uiState,
-                onDismiss = viewModel::cerrarEditorUsuario,
-                onNombreCambia = viewModel::onEditNombreCambia,
-                onRutCambia = viewModel::onEditRutCambia,
-                onCorreoCambia = viewModel::onEditCorreoCambia,
-                onTelefonoCambia = viewModel::onEditTelefonoCambia,
-                onCargoCambia = viewModel::onEditCargoCambia,
-                onPerfilCambia = viewModel::onEditPerfilCambia,
-                onActivoCambia = viewModel::onEditActivoCambia,
-                onNuevaContrasenaCambia = viewModel::onEditNuevaContrasenaCambia,
-                onGuardar = viewModel::guardarCambiosUsuario
-            )
-        }
-        if (uiState.perfilEnEdicion != null) {
-            DialogoEditarPerfil(
-                uiState = uiState,
-                onDismiss = viewModel::cerrarEditorPerfil,
-                onNombreCambia = viewModel::onEditPerfilNombreCambia,
-                onDescripcionCambia = viewModel::onEditPerfilDescripcionCambia,
-                onHabilitadoCambia = viewModel::onEditPerfilHabilitadoCambia,
-                onAplicarATodosCambia = viewModel::onAplicarATodosCambia,
-                onGuardar = viewModel::guardarCambiosPerfil
-            )
+    LaunchedEffect(uiState.mensajeConfirmacion) {
+        uiState.mensajeConfirmacion?.let { mensaje ->
+            snackbarHostState.showSnackbar(mensaje)
+            viewModel.limpiarMensaje()
         }
     }
+
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        drawerContent = {
+            ModalDrawerSheet(
+                drawerContainerColor = MaterialTheme.colorScheme.surface
+            ) {
+                val coloresItemDrawer = NavigationDrawerItemDefaults.colors(
+                    selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.16f),
+                    selectedIconColor = MaterialTheme.colorScheme.primary,
+                    selectedTextColor = MaterialTheme.colorScheme.primary,
+                    unselectedIconColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f),
+                    unselectedTextColor = MaterialTheme.colorScheme.onSurface
+                )
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.surface)
+                        .padding(24.dp)
+                ) {
+                    Text(
+                        text = "Tienda Retail Sur",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Subgerencia y Administración",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+
+                NavigationDrawerItem(
+                    label = { Text("Gestión de usuarios") },
+                    icon = { Icon(Icons.Default.VerifiedUser, contentDescription = null) },
+                    selected = true,
+                    onClick = { scope.launch { drawerState.close() } },
+                    colors = coloresItemDrawer,
+                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                )
+                NavigationDrawerItem(
+                    label = { Text("Mi Perfil") },
+                    icon = { Icon(Icons.Default.Person, contentDescription = null) },
+                    selected = false,
+                    onClick = {
+                        scope.launch { drawerState.close() }
+                        onIrAMiPerfilClick()
+                    },
+                    colors = coloresItemDrawer,
+                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                )
+
+                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+
+                NavigationDrawerItem(
+                    label = { Text("Cerrar Sesión") },
+                    icon = { Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = null) },
+                    selected = false,
+                    onClick = {
+                        scope.launch { drawerState.close() }
+                        onCerrarSesionClick()
+                    },
+                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
+                    colors = coloresItemDrawer
+                )
+            }
+        }
+    ) {
+        Scaffold(
+            snackbarHost = { SnackbarHost(snackbarHostState) },
+            topBar = {
+                TopAppBar(
+                    title = {
+                        Column {
+                            Text(
+                                text = "Ajustes de Administrador",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "Gestión de perfiles, colaboradores y tienda",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.75f)
+                            )
+                        }
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = { scope.launch { drawerState.open() } }) {
+                            Icon(
+                                imageVector = Icons.Default.Menu,
+                                contentDescription = "Abrir menú lateral"
+                            )
+                        }
+                    }
+                )
+            }
+        ) { innerPadding ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+            ) {
+                TabRow(
+                    selectedTabIndex = uiState.seccionActual.ordinal,
+                    containerColor = MaterialTheme.colorScheme.surface
+                ) {
+                    SeccionAjustesAdmin.entries.forEach { seccion ->
+                        val icono = when (seccion) {
+                            SeccionAjustesAdmin.COLABORADORES -> Icons.Default.People
+                            SeccionAjustesAdmin.PERFILES -> Icons.Default.Settings
+                            SeccionAjustesAdmin.TIENDA -> Icons.Default.Store
+                        }
+                        Tab(
+                            selected = uiState.seccionActual == seccion,
+                            onClick = { viewModel.seleccionarSeccion(seccion) },
+                            text = { Text(seccion.titulo) },
+                            icon = { Icon(icono, contentDescription = null) }
+                        )
+                    }
+                }
+                when (uiState.seccionActual) {
+                    SeccionAjustesAdmin.COLABORADORES -> {
+                        SeccionColaboradoresContent(
+                            uiState = uiState,
+                            onBusquedaCambia = viewModel::onBusquedaCambia,
+                            onFiltroPerfilCambia = viewModel::onFiltroPerfilCambia,
+                            onAlternarActivo = viewModel::alternarEstadoUsuario,
+                            onEditarClick = viewModel::abrirEditorUsuario,
+                            onIrARegistroColaborador = onIrARegistroColaborador,
+                            onResolverSolicitud = viewModel::resolverSolicitudCorreo
+                        )
+                    }
+                    SeccionAjustesAdmin.PERFILES -> {
+                        SeccionPerfilesContent(
+                            perfiles = uiState.perfiles,
+                            usuarios = uiState.usuarios,
+                            onAlternarPerfil = viewModel::alternarEstadoPerfil,
+                            onEditarPerfilClick = viewModel::abrirEditorPerfil
+                        )
+                    }
+                    SeccionAjustesAdmin.TIENDA -> {
+                        SeccionTiendaYCuentaContent(
+                            metaConversionTexto = uiState.metaConversionTexto,
+                            onMetaCambia = viewModel::onMetaConversionCambia,
+                            onGuardarMeta = viewModel::guardarMetaConversion,
+                            accesos = uiState.accesos,
+                            onAlternarAcceso = viewModel::alternarEstadoAcceso,
+                            onIrAMiPerfilClick = onIrAMiPerfilClick
+                        )
+                    }
+                }
+            }
+            if (uiState.usuarioEnEdicion != null) {
+                DialogoEditarUsuario(
+                    uiState = uiState,
+                    onDismiss = viewModel::cerrarEditorUsuario,
+                    onNombreCambia = viewModel::onEditNombreCambia,
+                    onRutCambia = viewModel::onEditRutCambia,
+                    onCorreoCambia = viewModel::onEditCorreoCambia,
+                    onTelefonoCambia = viewModel::onEditTelefonoCambia,
+                    onCargoCambia = viewModel::onEditCargoCambia,
+                    onPerfilCambia = viewModel::onEditPerfilCambia,
+                    onActivoCambia = viewModel::onEditActivoCambia,
+                    onNuevaContrasenaCambia = viewModel::onEditNuevaContrasenaCambia,
+                    onGuardar = viewModel::guardarCambiosUsuario
+                )
+            }
+            if (uiState.perfilEnEdicion != null) {
+                DialogoEditarPerfil(
+                    uiState = uiState,
+                    onDismiss = viewModel::cerrarEditorPerfil,
+                    onNombreCambia = viewModel::onEditPerfilNombreCambia,
+                    onDescripcionCambia = viewModel::onEditPerfilDescripcionCambia,
+                    onHabilitadoCambia = viewModel::onEditPerfilHabilitadoCambia,
+                    onAplicarATodosCambia = viewModel::onAplicarATodosCambia,
+                    onGuardar = viewModel::guardarCambiosPerfil
+                )
+            }
+        }
+    }
+}
+
+private fun formatearNombrePerfil(codigo: String): String = when (codigo) {
+    "TODOS" -> "Todos los perfiles"
+    "JEFA_TIENDA" -> "Jefa de Tienda"
+    "SUBGERENTE" -> "Subgerente"
+    "SUPERVISOR" -> "Supervisor"
+    "OBSERVADOR" -> "Observador"
+    else -> codigo
 }
 
 @Composable
@@ -250,7 +321,8 @@ private fun SeccionColaboradoresContent(
     onFiltroPerfilCambia: (String) -> Unit,
     onAlternarActivo: (Usuario, Boolean) -> Unit,
     onEditarClick: (Usuario) -> Unit,
-    onIrARegistroColaborador: () -> Unit
+    onIrARegistroColaborador: () -> Unit,
+    onResolverSolicitud: (SolicitudCorreo, Boolean) -> Unit
 ) {
     val usuariosFiltrados = uiState.usuarios.filter { u ->
         val coincideTexto = uiState.busqueda.isBlank() ||
@@ -278,7 +350,7 @@ private fun SeccionColaboradoresContent(
             TarjetaContadorAdmin(
                 titulo = "Total Cuentas",
                 valor = "${uiState.usuarios.size}",
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1f)
             )
             TarjetaContadorAdmin(
                 titulo = "Habilitados",
@@ -307,12 +379,16 @@ private fun SeccionColaboradoresContent(
                 .horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            val opciones = listOf("TODOS", "SUBGERENTE", "OBSERVADOR")
+            val opciones = listOf("TODOS", "JEFA_TIENDA", "SUBGERENTE", "SUPERVISOR", "OBSERVADOR")
             opciones.forEach { codigo ->
                 FilterChip(
                     selected = uiState.filtroPerfil == codigo,
                     onClick = { onFiltroPerfilCambia(codigo) },
                     label = { Text(if (codigo == "TODOS") "Todos los perfiles" else codigo) },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.18f),
+                        selectedLabelColor = MaterialTheme.colorScheme.primary
+                    )
                 )
             }
         }
@@ -327,6 +403,66 @@ private fun SeccionColaboradoresContent(
             Spacer(modifier = Modifier.width(8.dp))
             Text("Registrar Nuevo Colaborador", fontWeight = FontWeight.Bold)
         }
+
+        if (uiState.solicitudesCorreo.isNotEmpty()) {
+            Text(
+                text = "Solicitudes de Cambio de Correo (${uiState.solicitudesCorreo.size})",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
+            uiState.solicitudesCorreo.forEach { solicitud ->
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(
+                            text = "${solicitud.nombreUsuario} (${solicitud.rutUsuario})",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "Actual: ${solicitud.correoActual}",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        Text(
+                            text = "Nuevo solicitado: ${solicitud.correoNuevo}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        if (solicitud.motivo.isNotBlank()) {
+                            Text(
+                                text = "Motivo: ${solicitud.motivo}",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            OutlinedButton(
+                                onClick = { onResolverSolicitud(solicitud, false) },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("Rechazar")
+                            }
+                            Button(
+                                onClick = { onResolverSolicitud(solicitud, true) },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("Aprobar")
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         usuariosFiltrados.forEach { usuario ->
             val perfilHabilitado = uiState.perfiles.find { it.nombre == usuario.perfil || it.codigo == usuario.perfil }?.habilitado ?: true
             TarjetaColaboradorItem(
@@ -345,27 +481,31 @@ private fun SeccionColaboradoresContent(
 private fun TarjetaContadorAdmin(
     titulo: String,
     valor: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    valorColor: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.onSurface
 ) {
     Card(
         modifier = modifier,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
     ) {
         Column(
-            modifier = Modifier.padding(12.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 12.dp, horizontal = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
                 text = titulo,
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f)
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = valor,
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = valorColor
             )
         }
     }
@@ -418,14 +558,14 @@ private fun TarjetaColaboradorItem(
                 }
 
                 Surface(
-                    color = MaterialTheme.colorScheme.primaryContainer,
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f),
                     shape = RoundedCornerShape(8.dp)
                 ) {
                     Text(
-                        text = usuario.perfil,
+                        text = formatearNombrePerfil(usuario.perfil),
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                     )
                 }
@@ -446,7 +586,7 @@ private fun TarjetaColaboradorItem(
 
             if (!perfilGlobalHabilitado) {
                 Text(
-                    text = "Aviso: El perfil ${usuario.perfil} está deshabilitado globalmente",
+                    text = "Aviso: El perfil ${formatearNombrePerfil(usuario.perfil)} está deshabilitado globalmente",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.error
                 )
@@ -466,7 +606,8 @@ private fun TarjetaColaboradorItem(
                     Text(
                         text = if (usuario.activo) "Habilitado" else "Deshabilitado",
                         style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurface
+                        fontWeight = FontWeight.Medium,
+                        color = if (usuario.activo) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.error
                     )
                 }
 
@@ -682,8 +823,6 @@ private fun SeccionTiendaYCuentaContent(
                 }
             }
         }
-
-        // Estado operativo de accesos
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)

@@ -6,6 +6,7 @@ import com.example.tiendaretailsur.model.AjustesAdminUiState
 import com.example.tiendaretailsur.model.ConfiguracionAcceso
 import com.example.tiendaretailsur.model.ConfiguracionPerfil
 import com.example.tiendaretailsur.model.SeccionAjustesAdmin
+import com.example.tiendaretailsur.model.SolicitudCorreo
 import com.example.tiendaretailsur.model.Usuario
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -42,6 +43,12 @@ class AjustesAdminViewModel(
             emptyList()
         }
 
+        val solicitudesBd = try {
+            dbHelper.listarSolicitudesCorreoPendientes()
+        } catch (e: Exception) {
+            emptyList()
+        }
+
         val accesosConfig = puertasBd.map { puerta ->
             ConfiguracionAcceso(
                 codigo = puerta.id,
@@ -58,8 +65,22 @@ class AjustesAdminViewModel(
                 usuarios = usuariosBd,
                 perfiles = perfilesBd,
                 accesos = accesosConfig,
+                solicitudesCorreo = solicitudesBd,
                 metaConversionTexto = "15.0"
             )
+        }
+    }
+
+    fun resolverSolicitudCorreo(solicitud: SolicitudCorreo, aprobar: Boolean) {
+        try {
+            dbHelper.resolverSolicitudCorreo(solicitud, aprobar)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        recargarDatos()
+        val accion = if (aprobar) "aprobada y correo actualizado" else "rechazada"
+        _uiState.update {
+            it.copy(mensajeConfirmacion = "Solicitud de ${solicitud.nombreUsuario} $accion")
         }
     }
 
@@ -81,6 +102,11 @@ class AjustesAdminViewModel(
 
     fun alternarEstadoUsuario(usuario: Usuario, nuevoEstado: Boolean) {
         val estadoTexto = if (nuevoEstado) "habilitado" else "deshabilitado"
+        try {
+            dbHelper.actualizarEstadoUsuario(usuario.rut, nuevoEstado)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
 
         _uiState.update { estadoActual ->
             val listaActualizada = estadoActual.usuarios.map { u ->
@@ -179,6 +205,10 @@ class AjustesAdminViewModel(
                 correo = estado.editCorreo,
                 telefono = estado.editTelefono
             )
+            dbHelper.actualizarEstadoUsuario(
+                rut = usuarioOriginal.rut,
+                activo = estado.editActivo
+            )
             if (estado.editNuevaContrasena.isNotBlank()) {
                 dbHelper.actualizarContrasena(
                     rutOCorreo = usuarioOriginal.rut,
@@ -260,6 +290,7 @@ class AjustesAdminViewModel(
             )
         }
     }
+
     fun onMetaConversionCambia(valor: String) {
         _uiState.update { it.copy(metaConversionTexto = valor) }
     }
@@ -278,6 +309,7 @@ class AjustesAdminViewModel(
             }
         }
     }
+
     fun alternarEstadoAcceso(codigoAcceso: String, habilitado: Boolean) {
         val estadoTexto = if (habilitado) "operativo" else "cerrado por evento/mantención"
         try {
