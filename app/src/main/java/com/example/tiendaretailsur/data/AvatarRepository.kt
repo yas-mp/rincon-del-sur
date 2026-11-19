@@ -1,5 +1,8 @@
-package com.example.tiendaretailsur.data.remote
+package com.example.tiendaretailsur.data
 
+import com.example.tiendaretailsur.data.remote.AvatarApi
+import com.example.tiendaretailsur.data.remote.RetrofitClient
+import com.example.tiendaretailsur.data.remote.UsuarioResponse
 import com.example.tiendaretailsur.model.Usuario
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody

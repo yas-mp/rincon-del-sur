@@ -1,5 +1,8 @@
-package com.example.tiendaretailsur.data.remote
+package com.example.tiendaretailsur.data
 
+import com.example.tiendaretailsur.data.remote.ConteoRequest
+import com.example.tiendaretailsur.data.remote.ConteosApi
+import com.example.tiendaretailsur.data.remote.RetrofitClient
 import com.example.tiendaretailsur.model.DatoGrafico
 import com.example.tiendaretailsur.model.FormularioConteoUiState
 
