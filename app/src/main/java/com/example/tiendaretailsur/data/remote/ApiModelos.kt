@@ -85,6 +85,7 @@ data class RegistroRequest(
     val nombre: String,
     val correo: String,
     val telefono: String,
+    val contrasena: String,
     val cargo: String,
     val turno: String,
     val rolId: Long,
