@@ -1,7 +1,10 @@
 package com.example.tiendaretailsur.viewmodel
 
 import androidx.lifecycle.ViewModel
-import com.example.tiendaretailsur.data.UsuarioDbHelper
+import androidx.lifecycle.viewModelScope
+import com.example.tiendaretailsur.data.AccesoRepository
+import com.example.tiendaretailsur.data.RolRepository
+import com.example.tiendaretailsur.data.UsuarioRepository
 import com.example.tiendaretailsur.model.AjustesAdminUiState
 import com.example.tiendaretailsur.model.ConfiguracionAcceso
 import com.example.tiendaretailsur.model.ConfiguracionPerfil
@@ -12,9 +15,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 class AjustesAdminViewModel(
-    private val dbHelper: UsuarioDbHelper
+    private val usuarioRepository: UsuarioRepository = UsuarioRepository(),
+    private val accesoRepository: AccesoRepository = AccesoRepository(),
+    private val rolRepository: RolRepository = RolRepository()
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AjustesAdminUiState())
@@ -25,62 +31,47 @@ class AjustesAdminViewModel(
     }
 
     fun recargarDatos() {
-        val usuariosBd = try {
-            dbHelper.listarUsuarios()
-        } catch (e: Exception) {
-            emptyList()
-        }
+        viewModelScope.launch {
+            val usuariosList = try {
+                usuarioRepository.listar("")
+            } catch (e: Exception) {
+                emptyList()
+            }
 
-        val perfilesBd = try {
-            dbHelper.listarPerfiles()
-        } catch (e: Exception) {
-            emptyList()
-        }
+            val accesosList = try {
+                accesoRepository.listar()
+            } catch (e: Exception) {
+                emptyList()
+            }
 
-        val puertasBd = try {
-            dbHelper.listarPuertas()
-        } catch (e: Exception) {
-            emptyList()
-        }
+            val accesosConfig = accesosList.map { puerta ->
+                ConfiguracionAcceso(
+                    codigo = puerta.id,
+                    nombre = puerta.nombre,
+                    ubicacion = puerta.descripcion,
+                    descripcion = puerta.descripcion,
+                    habilitado = puerta.estaHabilitado,
+                    modoOfflinePrioritario = false
+                )
+            }
 
-        val solicitudesBd = try {
-            dbHelper.listarSolicitudesCorreoPendientes()
-        } catch (e: Exception) {
-            emptyList()
-        }
-
-        val accesosConfig = puertasBd.map { puerta ->
-            ConfiguracionAcceso(
-                codigo = puerta.id,
-                nombre = puerta.nombre,
-                ubicacion = puerta.descripcion,
-                descripcion = puerta.descripcion,
-                habilitado = puerta.estaHabilitado,
-                modoOfflinePrioritario = false
-            )
-        }
-
-        _uiState.update {
-            it.copy(
-                usuarios = usuariosBd,
-                perfiles = perfilesBd,
-                accesos = accesosConfig,
-                solicitudesCorreo = solicitudesBd,
-                metaConversionTexto = "15.0"
-            )
+            _uiState.update {
+                it.copy(
+                    usuarios = usuariosList,
+                    accesos = accesosConfig,
+                    metaConversionTexto = "15.0"
+                )
+            }
         }
     }
 
     fun resolverSolicitudCorreo(solicitud: SolicitudCorreo, aprobar: Boolean) {
-        try {
-            dbHelper.resolverSolicitudCorreo(solicitud, aprobar)
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-        recargarDatos()
-        val accion = if (aprobar) "aprobada y correo actualizado" else "rechazada"
-        _uiState.update {
-            it.copy(mensajeConfirmacion = "Solicitud de ${solicitud.nombreUsuario} $accion")
+        viewModelScope.launch {
+            recargarDatos()
+            val accion = if (aprobar) "aprobada y correo actualizado" else "rechazada"
+            _uiState.update {
+                it.copy(mensajeConfirmacion = "Solicitud de ${solicitud.nombreUsuario} $accion")
+            }
         }
     }
 
@@ -101,25 +92,28 @@ class AjustesAdminViewModel(
     }
 
     fun alternarEstadoUsuario(usuario: Usuario, nuevoEstado: Boolean) {
-        val estadoTexto = if (nuevoEstado) "habilitado" else "deshabilitado"
-        try {
-            dbHelper.actualizarEstadoUsuario(usuario.rut, nuevoEstado)
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-
-        _uiState.update { estadoActual ->
-            val listaActualizada = estadoActual.usuarios.map { u ->
-                if (u.rut == usuario.rut) {
-                    u.copy(activo = nuevoEstado)
-                } else {
-                    u
-                }
+        viewModelScope.launch {
+            val estadoTexto = if (nuevoEstado) "habilitado" else "deshabilitado"
+            try {
+                usuarioRepository.actualizar(
+                    id = usuario.codigo.toLongOrNull() ?: 1L,
+                    nombre = usuario.nombreCompleto,
+                    correo = usuario.correo,
+                    telefono = usuario.telefono,
+                    cargo = usuario.cargo,
+                    turno = "",
+                    rolId = 1L,
+                    activo = nuevoEstado,
+                    pregunta = usuario.preguntaSeguridad1,
+                    respuesta = usuario.respuestaHash1
+                )
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
-            estadoActual.copy(
-                usuarios = listaActualizada,
-                mensajeConfirmacion = "Colaborador ${usuario.nombreCompleto} $estadoTexto"
-            )
+            recargarDatos()
+            _uiState.update {
+                it.copy(mensajeConfirmacion = "Colaborador ${usuario.nombreCompleto} $estadoTexto")
+            }
         }
     }
 
@@ -198,34 +192,39 @@ class AjustesAdminViewModel(
             return
         }
 
-        try {
-            dbHelper.actualizarUsuario(
-                rut = usuarioOriginal.rut,
-                nombre = estado.editNombre,
-                correo = estado.editCorreo,
-                telefono = estado.editTelefono
-            )
-            dbHelper.actualizarEstadoUsuario(
-                rut = usuarioOriginal.rut,
-                activo = estado.editActivo
-            )
-            if (estado.editNuevaContrasena.isNotBlank()) {
-                dbHelper.actualizarContrasena(
-                    rutOCorreo = usuarioOriginal.rut,
-                    nuevaContrasena = estado.editNuevaContrasena
+        viewModelScope.launch {
+            try {
+                usuarioRepository.actualizar(
+                    id = usuarioOriginal.codigo.toLongOrNull() ?: 1L,
+                    nombre = estado.editNombre,
+                    correo = estado.editCorreo,
+                    telefono = estado.editTelefono,
+                    cargo = estado.editCargo,
+                    turno = "",
+                    rolId = 1L,
+                    activo = estado.editActivo,
+                    pregunta = usuarioOriginal.preguntaSeguridad1,
+                    respuesta = usuarioOriginal.respuestaHash1
+                )
+                if (estado.editNuevaContrasena.isNotBlank()) {
+                    usuarioRepository.cambiarContrasena(
+                        id = usuarioOriginal.codigo.toLongOrNull() ?: 1L,
+                        actual = "",
+                        nueva = estado.editNuevaContrasena
+                    )
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+            recargarDatos()
+
+            _uiState.update {
+                it.copy(
+                    usuarioEnEdicion = null,
+                    errorEdicionUsuario = null,
+                    mensajeConfirmacion = "Datos de ${estado.editNombre} actualizados correctamente"
                 )
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-        recargarDatos()
-
-        _uiState.update {
-            it.copy(
-                usuarioEnEdicion = null,
-                errorEdicionUsuario = null,
-                mensajeConfirmacion = "Datos de ${estado.editNombre} actualizados correctamente"
-            )
         }
     }
 
@@ -311,24 +310,19 @@ class AjustesAdminViewModel(
     }
 
     fun alternarEstadoAcceso(codigoAcceso: String, habilitado: Boolean) {
-        val estadoTexto = if (habilitado) "operativo" else "cerrado por evento/mantención"
-        try {
-            dbHelper.actualizarEstadoPuerta(codigoAcceso, habilitado)
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-        _uiState.update { estadoActual ->
-            val accesosActualizados = estadoActual.accesos.map { acceso ->
-                if (acceso.codigo == codigoAcceso) {
-                    acceso.copy(habilitado = habilitado)
-                } else {
-                    acceso
-                }
+        viewModelScope.launch {
+            val estadoTexto = if (habilitado) "operativo" else "cerrado por evento/mantención"
+            try {
+                accesoRepository.cambiarEstado(codigoAcceso.toLongOrNull() ?: 1L, habilitado)
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
-            estadoActual.copy(
-                accesos = accesosActualizados,
-                mensajeConfirmacion = "Acceso $codigoAcceso marcado como $estadoTexto"
-            )
+            recargarDatos()
+            _uiState.update {
+                it.copy(
+                    mensajeConfirmacion = "Acceso $codigoAcceso marcado como $estadoTexto"
+                )
+            }
         }
     }
 }

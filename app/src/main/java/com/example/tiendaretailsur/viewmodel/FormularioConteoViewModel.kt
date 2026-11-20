@@ -2,6 +2,8 @@ package com.example.tiendaretailsur.viewmodel
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
+import com.example.tiendaretailsur.data.AccesoRepository
+import com.example.tiendaretailsur.data.ConteoRepository
 import com.example.tiendaretailsur.data.UsuarioDbHelper
 import com.example.tiendaretailsur.model.AccesoTienda
 import com.example.tiendaretailsur.model.FormularioConteoUiState
