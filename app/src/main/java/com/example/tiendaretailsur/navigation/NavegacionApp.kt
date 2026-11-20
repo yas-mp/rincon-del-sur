@@ -7,15 +7,12 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.example.tiendaretailsur.data.UsuarioDbHelper
 import com.example.tiendaretailsur.model.SeccionAjustesAdmin
 import com.example.tiendaretailsur.ui.screens.AdminDashboardScreen
 import com.example.tiendaretailsur.ui.screens.AjustesAdminScreen
@@ -32,12 +29,10 @@ import com.example.tiendaretailsur.ui.theme.MiRegistroTheme
 fun NavegacionApp(initialDarkTheme: Boolean = isSystemInDarkTheme()) {
     var isAdmin by rememberSaveable { mutableStateOf(true) }
     var isDarkTheme by rememberSaveable { mutableStateOf(initialDarkTheme) }
-    var correoUsuarioLogueado by rememberSaveable { mutableStateOf("admin@rincondelsur.cl") }
+    var correoUsuarioLogueado by rememberSaveable { mutableStateOf("") }
     var nombreUsuarioLogueado by rememberSaveable { mutableStateOf("") }
     var perfilUsuarioLogueado by rememberSaveable { mutableStateOf("") }
 
-    val context = LocalContext.current
-    val dbHelper = remember { UsuarioDbHelper(context) }
     val navController = rememberNavController()
 
     fun destinoPorRol(perfil: String): String {
@@ -87,7 +82,6 @@ fun NavegacionApp(initialDarkTheme: Boolean = isSystemInDarkTheme()) {
                 composable(Ruta.PrimerIngreso.ruta) {
                     PrimerIngresoScreen(
                         rutOCorreoUsuario = correoUsuarioLogueado,
-                        dbHelper = dbHelper,
                         onConfiguracionCompletada = {
                             navController.navigate(destinoPorRol(perfilUsuarioLogueado)) {
                                 popUpTo(Ruta.PrimerIngreso.ruta) { inclusive = true }
@@ -98,7 +92,6 @@ fun NavegacionApp(initialDarkTheme: Boolean = isSystemInDarkTheme()) {
 
                 composable(Ruta.RecuperacionContrasena.ruta) {
                     RecuperarContrasenaScreen(
-                        dbHelper = dbHelper,
                         onVolverALoginClick = {
                             navController.popBackStack()
                         }
@@ -107,7 +100,6 @@ fun NavegacionApp(initialDarkTheme: Boolean = isSystemInDarkTheme()) {
 
                 composable(Ruta.FormularioRegistro.ruta) {
                     FormularioRegistroScreen(
-                        dbHelper = dbHelper,
                         onIrALoginClick = {
                             navController.navigate(Ruta.AjustesAdmin.ruta) {
                                 popUpTo(Ruta.AjustesAdmin.ruta) { inclusive = true }
@@ -117,12 +109,9 @@ fun NavegacionApp(initialDarkTheme: Boolean = isSystemInDarkTheme()) {
                 }
 
                 composable(Ruta.MenuPrincipal.ruta) {
-                    val nombreReal = nombreUsuarioLogueado.ifBlank {
-                        dbHelper.obtenerUsuarioPorCorreo(correoUsuarioLogueado)?.nombreCompleto ?: ""
-                    }
                     MenuPrincipalScreen(
                         isAdmin = isAdmin,
-                        nombreUsuario = nombreReal,
+                        nombreUsuario = nombreUsuarioLogueado,
                         onIrAdminDashboard = {
                             navController.navigate(Ruta.AdminPanel.ruta)
                         },
@@ -141,7 +130,6 @@ fun NavegacionApp(initialDarkTheme: Boolean = isSystemInDarkTheme()) {
                     PerfilScreen(
                         isAdmin = isAdmin,
                         correoLogueado = correoUsuarioLogueado,
-                        dbHelper = dbHelper,
                         onVolver = {
                             navController.popBackStack()
                         }
@@ -149,12 +137,7 @@ fun NavegacionApp(initialDarkTheme: Boolean = isSystemInDarkTheme()) {
                 }
 
                 composable(Ruta.FormularioConteo.ruta) {
-                    val nombreReal = nombreUsuarioLogueado.ifBlank {
-                        dbHelper.obtenerUsuarioPorCorreo(correoUsuarioLogueado)?.nombreCompleto
-                            ?: "Observador en turno"
-                    }
                     FormularioConteoScreen(
-                        nombreObservador = nombreReal,
                         onVolver = {
                             navController.popBackStack()
                         }
@@ -164,7 +147,6 @@ fun NavegacionApp(initialDarkTheme: Boolean = isSystemInDarkTheme()) {
                 composable(Ruta.AdminPanel.ruta) {
                     val esSupervisor = perfilUsuarioLogueado.uppercase() in listOf("P-03", "SUPERVISOR")
                     AdminDashboardScreen(
-                        dbHelper = dbHelper,
                         esSupervisor = esSupervisor,
                         mostrarAjustesAdmin = false,
                         onVolverInicio = {

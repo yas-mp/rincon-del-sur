@@ -7,10 +7,10 @@ import kotlin.jvm.java
 
 object RetrofitClient {
 
-    private const val URL_ROLES = "http://10.0.2.2:8081/"
-    private const val URL_USUARIOS = "http://10.0.2.2:8082/"
-    private const val URL_ACCESOS = "http://10.0.2.2:8083/"
-    private const val URL_CONTEOS = "http://10.0.2.2:8084/"
+    private const val URL_ROLES = "https://htf54zfs-8083.brs.devtunnels.ms/"
+    private const val URL_USUARIOS = "https://htf54zfs-8084.brs.devtunnels.ms/"
+    private const val URL_ACCESOS = "https://htf54zfs-8081.brs.devtunnels.ms/"
+    private const val URL_CONTEOS = "https://htf54zfs-8082.brs.devtunnels.ms/"
 
     private fun crear(urlBase: String): Retrofit =
         Retrofit.Builder()

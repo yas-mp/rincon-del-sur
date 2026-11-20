@@ -2,17 +2,20 @@ package com.example.tiendaretailsur.viewmodel
 
 import android.util.Patterns
 import androidx.lifecycle.ViewModel
-import com.example.tiendaretailsur.data.UsuarioDbHelper
+import androidx.lifecycle.viewModelScope
+import com.example.tiendaretailsur.data.UsuarioRepository
 import com.example.tiendaretailsur.model.FormularioRegistroUiState
 import com.example.tiendaretailsur.model.RolUsuario
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
-class FormularioRegistroViewModel(
-    private val dbHelper: UsuarioDbHelper
-) : ViewModel() {
+class FormularioRegistroViewModel : ViewModel() {
+
+    private val usuarioRepository = UsuarioRepository()
+
     private val _uiState = MutableStateFlow(FormularioRegistroUiState())
     val uiState: StateFlow<FormularioRegistroUiState> = _uiState.asStateFlow()
 
@@ -62,6 +65,7 @@ class FormularioRegistroViewModel(
     fun onLimpiarFormulario() {
         _uiState.value = FormularioRegistroUiState()
     }
+
     fun onTerminosCambia(valor: Boolean) {
         _uiState.update { it.copy(aceptarTerminos = valor, errorTerminos = null) }
     }
@@ -69,7 +73,7 @@ class FormularioRegistroViewModel(
     fun onRegistrar() {
         val estado = _uiState.value
 
-        var errorRut = if (!validarFormatoRut(estado.rut)) "El RUT no tiene un formato válido" else null
+        val errorRut = if (!validarFormatoRut(estado.rut)) "El RUT no tiene un formato válido" else null
         val errorNombre = when {
             estado.nombre.isBlank() -> "El nombre es obligatorio"
             estado.nombre.trim().length < 3 -> "Ingresa tu nombre completo"
@@ -94,31 +98,56 @@ class FormularioRegistroViewModel(
             errorTerminos,
         ).any { it != null }
 
-        var guardar = false
-        var claveGenerada = ""
-
-        if (!siHayErrores) {
-            claveGenerada = generarContrasena()
-            val estadoParaGuardar = estado.copy(rut = autoCompletadoRut(estado.rut))
-            val resultado = dbHelper.registroUsuarioFormularioRegistro(estadoParaGuardar, claveGenerada)
-            if (resultado != -1L) {
-                guardar = true
-            } else {
-                errorRut = "El RUT ya se encuentra registrado"
-                claveGenerada = ""
+        if (siHayErrores) {
+            _uiState.update {
+                it.copy(
+                    errorFormatoRut = errorRut,
+                    errorNombre = errorNombre,
+                    errorFormatoCorreo = errorCorreo,
+                    errorTelefono = errorTelefono,
+                    errorTerminos = errorTerminos,
+                    registroExitoso = false
+                )
             }
+            return
         }
 
-        _uiState.update {
-            it.copy(
-                errorFormatoRut = errorRut,
-                errorNombre = errorNombre,
-                errorFormatoCorreo = errorCorreo,
-                errorTelefono = errorTelefono,
-                errorTerminos = errorTerminos,
-                contrasenaTemporalGenerada = claveGenerada,
-                registroExitoso = guardar
-            )
+        val claveGenerada = generarContrasena()
+        val rutFormateado = autoCompletadoRut(estado.rut)
+
+        viewModelScope.launch {
+            try {
+                usuarioRepository.registrar(
+                    rut = rutFormateado,
+                    nombre = estado.nombre.trim(),
+                    correo = estado.correo.trim(),
+                    telefono = estado.telefono,
+                    contrasena = claveGenerada,
+                    cargo = estado.rolSeleccionado.name,
+                    turno = "Turno Diurno",
+                    rolId = estado.rolSeleccionado.id
+                )
+
+                _uiState.update {
+                    it.copy(
+                        errorFormatoRut = null,
+                        errorNombre = null,
+                        errorFormatoCorreo = null,
+                        errorTelefono = null,
+                        errorTerminos = null,
+                        contrasenaTemporalGenerada = claveGenerada,
+                        registroExitoso = true
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(
+                        errorFormatoRut = e.message ?: "No se pudo registrar el colaborador",
+                        contrasenaTemporalGenerada = "",
+                        registroExitoso = false
+                    )
+                }
+            }
         }
     }
 

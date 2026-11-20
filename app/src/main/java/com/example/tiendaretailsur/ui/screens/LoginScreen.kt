@@ -48,16 +48,11 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.lifecycle.viewmodel.initializer
-import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.tiendaretailsur.R
-import com.example.tiendaretailsur.data.UsuarioDbHelper
 import com.example.tiendaretailsur.model.LoginUiState
 import com.example.tiendaretailsur.model.Usuario
-import com.example.tiendaretailsur.ui.styles.EstiloCampo.colores
 import com.example.tiendaretailsur.ui.theme.Dimens
 import com.example.tiendaretailsur.ui.theme.Exito
-import com.example.tiendaretailsur.ui.theme.ExitoFondo
 import com.example.tiendaretailsur.ui.theme.GrisDeshabilitada
 import com.example.tiendaretailsur.ui.theme.MiRegistroTheme
 import com.example.tiendaretailsur.viewmodel.LoginViewModel

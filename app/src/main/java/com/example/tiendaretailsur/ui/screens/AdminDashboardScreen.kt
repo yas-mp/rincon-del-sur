@@ -57,10 +57,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.lifecycle.viewmodel.initializer
-import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.tiendaretailsur.R
-import com.example.tiendaretailsur.data.UsuarioDbHelper
 import com.example.tiendaretailsur.model.AdminDashboardUiState
 import com.example.tiendaretailsur.model.DatoGrafico
 import com.example.tiendaretailsur.model.SesionResumen
@@ -71,14 +68,9 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun AdminDashboardScreen(
-    dbHelper: UsuarioDbHelper,
     esSupervisor: Boolean = false,
     mostrarAjustesAdmin: Boolean = false,
-    adminViewModel: AdminDashboardViewModel = viewModel(
-        factory = viewModelFactory {
-            initializer { AdminDashboardViewModel(dbHelper) }
-        }
-    ),
+    adminViewModel: AdminDashboardViewModel = viewModel(),
     usuarioViewModel: UsuarioViewModel = viewModel(),
     onVolverInicio: () -> Unit = {},
     onAjustes: () -> Unit = {},
@@ -274,10 +266,13 @@ fun AdminDashboardContent(
                     Spacer(modifier = Modifier.height(16.dp))
 
                     val totalSegmentos = uiState.segmentacion.sumOf { it.valor }.coerceAtLeast(1)
-                    val transitoVal =
-                        uiState.segmentacion.find { it.etiqueta.contains("Transito") }?.valor ?: 0
-                    val clientesVal =
-                        uiState.segmentacion.find { it.etiqueta.contains("Clientes") }?.valor ?: 0
+                    val transitoVal = uiState.segmentacion.find {
+                        it.etiqueta.contains("Tránsito", ignoreCase = true) ||
+                                it.etiqueta.contains("Transito", ignoreCase = true)
+                    }?.valor ?: 0
+                    val clientesVal = uiState.segmentacion.find {
+                        it.etiqueta.contains("Clientes", ignoreCase = true)
+                    }?.valor ?: 0
 
                     val pctTransito = transitoVal.toFloat() / totalSegmentos
                     val pctClientes = clientesVal.toFloat() / totalSegmentos

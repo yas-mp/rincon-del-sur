@@ -45,7 +45,7 @@ class AdminDashboardViewModel : ViewModel() {
 
             val flujoPorHora = listaConteos
                 .groupBy { conteo ->
-                    val horaPrefix = conteo.hora.take(2)
+                    val horaPrefix = conteo.hora
                     if (horaPrefix.length == 2 && horaPrefix.all { it.isDigit() }) {
                         "$horaPrefix:00"
                     } else {

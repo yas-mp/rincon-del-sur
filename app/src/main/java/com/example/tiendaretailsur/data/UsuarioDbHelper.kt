@@ -1,5 +1,5 @@
 package com.example.tiendaretailsur.data
-
+/*
 import android.content.ContentValues
 import android.content.Context
 import android.database.Cursor
@@ -457,4 +457,4 @@ class UsuarioDbHelper(context: Context)
 
 
 }
-
+*/

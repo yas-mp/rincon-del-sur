@@ -6,9 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
-import com.example.tiendaretailsur.data.UsuarioDbHelper
 import com.example.tiendaretailsur.navigation.NavegacionApp
 import com.example.tiendaretailsur.ui.screens.AdminDashboardScreen
 import com.example.tiendaretailsur.ui.screens.LoginScreen
@@ -95,7 +93,7 @@ private fun MenuPrincipalAdminOscuroPreview() {
 private fun AdminDashBoardClaroPreview() {
     MiRegistroTheme(darkTheme = false) {
         Surface(color = MaterialTheme.colorScheme.background) {
-            AdminDashboardScreen(dbHelper = UsuarioDbHelper(LocalContext.current))
+            AdminDashboardScreen()
         }
     }
 }

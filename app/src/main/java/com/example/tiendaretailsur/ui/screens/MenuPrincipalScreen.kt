@@ -408,7 +408,6 @@ fun MenuPrincipalScreen(
                     Box(modifier = Modifier.padding(innerPadding)) {
                         FormularioConteoScreen(
                             puertaInicial = accesoSeleccionado!!,
-                            nombreObservador = nombreUsuario,
                             modifier = modifier,
                             onVolver = { accesoSeleccionado = null }
                         )

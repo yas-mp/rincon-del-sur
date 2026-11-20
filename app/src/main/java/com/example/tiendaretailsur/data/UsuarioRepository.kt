@@ -34,8 +34,8 @@ class UsuarioRepository (
         cargo: String,
         turno: String,
         rolId: Long,
-        pregunta: String,
-        respuesta: String
+        pregunta: String = "",
+        respuesta: String = ""
     ): Usuario {
         val request = RegistroRequest(
             rut = rut,
@@ -159,7 +159,8 @@ class UsuarioRepository (
         } catch (e: HttpException) {
             throw Exception("Error de servidor (${e.code()})")
         } catch (e: IOException) {
-            throw Exception("No se pudo conectar con el servidor. Verifica tu conexión.")
+            android.util.Log.e("RETROFIT_ERROR", "Fallo de red: ${e.javaClass.simpleName} - ${e.message}", e)
+            throw Exception("Error de red (${e.javaClass.simpleName}): ${e.message}")
         }
     }
 }

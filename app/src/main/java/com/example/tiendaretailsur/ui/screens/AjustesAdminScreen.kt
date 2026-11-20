@@ -71,13 +71,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.lifecycle.viewmodel.initializer
-import androidx.lifecycle.viewmodel.viewModelFactory
-import com.example.tiendaretailsur.data.UsuarioDbHelper
 import com.example.tiendaretailsur.model.AjustesAdminUiState
 import com.example.tiendaretailsur.model.ConfiguracionAcceso
 import com.example.tiendaretailsur.model.ConfiguracionPerfil
