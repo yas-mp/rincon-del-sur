@@ -11,7 +11,6 @@ object RetrofitClient {
     private const val URL_USUARIOS = "https://htf54zfs-8084.brs.devtunnels.ms/"
     private const val URL_ACCESOS = "https://htf54zfs-8081.brs.devtunnels.ms/"
     private const val URL_CONTEOS = "https://htf54zfs-8082.brs.devtunnels.ms/"
-
     private fun crear(urlBase: String): Retrofit =
         Retrofit.Builder()
             .baseUrl(urlBase)

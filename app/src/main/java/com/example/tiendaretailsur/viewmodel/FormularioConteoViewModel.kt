@@ -16,12 +16,12 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class FormularioConteoViewModel(
-    application: Application,
-    private val conteoRepository: ConteoRepository = ConteoRepository(),
-    private val accesoRepository: AccesoRepository = AccesoRepository(),
-    private val usuarioRepository: UsuarioRepository = UsuarioRepository()
+    application: Application
 ) : AndroidViewModel(application) {
 
+    private val conteoRepository = ConteoRepository()
+    private val accesoRepository = AccesoRepository()
+    private val usuarioRepository = UsuarioRepository()
     private val gestorSesion = GestorSesion(application)
 
     private val _uiState = MutableStateFlow(FormularioConteoUiState())
