@@ -41,7 +41,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.tiendaretailsur.model.FormularioConteoUiState
 import com.example.tiendaretailsur.viewmodel.FormularioConteoViewModel
 
 @Composable
@@ -57,38 +56,6 @@ fun FormularioConteoScreen(
 
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val estaPuertaBloqueada = viewModel.estaPuertaActualBloqueada()
-
-    FormularioConteoContent(
-        uiState = uiState,
-        estaBloqueada = estaPuertaBloqueada,
-        modifier = modifier,
-        onIncrementarTransito = { viewModel.incrementarTransito() },
-        onDecrementarTransito = viewModel::decrementarTransito,
-        onIncrementarClientes = { viewModel.incrementarClientes() },
-        onDecrementarClientes = viewModel::decrementarClientes,
-        onSeleccionarEdad = viewModel::seleccionarRangoEtario,
-        onSeleccionarCompania = viewModel::seleccionarCompania,
-        onEnviar = { viewModel.enviarFormulario() },
-        onLimpiarFeedback = viewModel::limpiarExitoso,
-        onVolver = onVolver
-    )
-}
-
-@Composable
-fun FormularioConteoContent(
-    uiState: FormularioConteoUiState,
-    estaBloqueada: Boolean = false,
-    modifier: Modifier = Modifier,
-    onIncrementarTransito: () -> Unit,
-    onDecrementarTransito: () -> Unit,
-    onIncrementarClientes: (Int) -> Unit,
-    onDecrementarClientes: () -> Unit,
-    onSeleccionarEdad: (String) -> Unit,
-    onSeleccionarCompania: (String) -> Unit,
-    onEnviar: () -> Unit,
-    onLimpiarFeedback: () -> Unit = {},
-    onVolver: () -> Unit
-) {
     val snackbarHostState = remember { SnackbarHostState() }
     var cantidadGrupo by remember { mutableIntStateOf(1) }
 
@@ -104,6 +71,7 @@ fun FormularioConteoContent(
             else -> 1
         }
     }
+
     LaunchedEffect(uiState.mensajeFeedback) {
         val mensaje = uiState.mensajeFeedback
         if (!mensaje.isNullOrBlank()) {
@@ -111,7 +79,7 @@ fun FormularioConteoContent(
                 message = mensaje,
                 duration = SnackbarDuration.Short
             )
-            onLimpiarFeedback()
+            viewModel.limpiarExitoso()
         }
     }
 
@@ -142,7 +110,7 @@ fun FormularioConteoContent(
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Surface(
-                        color = if (estaBloqueada) {
+                        color = if (estaPuertaBloqueada) {
                             MaterialTheme.colorScheme.error.copy(alpha = 0.12f)
                         } else {
                             MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
@@ -153,7 +121,7 @@ fun FormularioConteoContent(
                             text = "Puerta Activa: ${uiState.puertaAcceso}",
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.SemiBold,
-                            color = if (estaBloqueada) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                            color = if (estaPuertaBloqueada) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                         )
                     }
@@ -175,7 +143,7 @@ fun FormularioConteoContent(
 
             HorizontalDivider(color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f))
 
-            if (estaBloqueada) {
+            if (estaPuertaBloqueada) {
                 Card(
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
                     modifier = Modifier.fillMaxWidth()
@@ -227,11 +195,11 @@ fun FormularioConteoContent(
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         OutlinedButton(
-                            onClick = onDecrementarTransito,
-                            enabled = !estaBloqueada && uiState.puedeRestarTransito,
+                            onClick = { viewModel.decrementarTransito() },
+                            enabled = !estaPuertaBloqueada && uiState.puedeRestarTransito,
                             border = BorderStroke(
                                 1.dp,
-                                if (!estaBloqueada && uiState.puedeRestarTransito) {
+                                if (!estaPuertaBloqueada && uiState.puedeRestarTransito) {
                                     MaterialTheme.colorScheme.primary
                                 } else {
                                     MaterialTheme.colorScheme.outlineVariant
@@ -242,8 +210,8 @@ fun FormularioConteoContent(
                             Text("Restar (-1)")
                         }
                         Button(
-                            onClick = onIncrementarTransito,
-                            enabled = !estaBloqueada,
+                            onClick = { viewModel.incrementarTransito() },
+                            enabled = !estaPuertaBloqueada,
                             modifier = Modifier.weight(1f)
                         ) {
                             Text("Sumar (+1)")
@@ -311,11 +279,11 @@ fun FormularioConteoContent(
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         OutlinedButton(
-                            onClick = onDecrementarClientes,
-                            enabled = !estaBloqueada && uiState.puedeRestarCliente,
+                            onClick = { viewModel.decrementarClientes() },
+                            enabled = !estaPuertaBloqueada && uiState.puedeRestarCliente,
                             border = BorderStroke(
                                 1.dp,
-                                if (!estaBloqueada && uiState.puedeRestarCliente) {
+                                if (!estaPuertaBloqueada && uiState.puedeRestarCliente) {
                                     MaterialTheme.colorScheme.primary
                                 } else {
                                     MaterialTheme.colorScheme.outlineVariant
@@ -327,10 +295,10 @@ fun FormularioConteoContent(
                         }
                         Button(
                             onClick = {
-                                onIncrementarClientes(cantidadGrupo)
+                                viewModel.incrementarClientes() // Si deseas sumar cantidadGrupo, o usar viewModel.incrementarClientes()
                                 cantidadGrupo = 1
                             },
-                            enabled = !estaBloqueada,
+                            enabled = !estaPuertaBloqueada,
                             modifier = Modifier.weight(1f)
                         ) {
                             Text("Sumar (+$cantidadGrupo)")
@@ -358,10 +326,10 @@ fun FormularioConteoContent(
                     ) {
                         listOf("18–25", "26–40", "41–60", "61+").forEach { rango ->
                             FilterChip(
-                                enabled = !estaBloqueada,
+                                enabled = !estaPuertaBloqueada,
                                 modifier = Modifier.weight(1f),
                                 selected = uiState.rangoEtario == rango,
-                                onClick = { onSeleccionarEdad(rango) },
+                                onClick = { viewModel.seleccionarRangoEtario(rango) },
                                 colors = coloresChip,
                                 label = {
                                     Text(
@@ -400,10 +368,10 @@ fun FormularioConteoContent(
                         ) {
                             listOf("Solo", "Pareja").forEach { comp ->
                                 FilterChip(
-                                    enabled = !estaBloqueada,
+                                    enabled = !estaPuertaBloqueada,
                                     modifier = Modifier.weight(1f),
                                     selected = uiState.compania == comp,
-                                    onClick = { onSeleccionarCompania(comp) },
+                                    onClick = { viewModel.seleccionarCompania(comp) },
                                     colors = coloresChip,
                                     label = {
                                         Text(
@@ -422,10 +390,10 @@ fun FormularioConteoContent(
                         ) {
                             listOf("Con niños", "Grupo").forEach { comp ->
                                 FilterChip(
-                                    enabled = !estaBloqueada,
+                                    enabled = !estaPuertaBloqueada,
                                     modifier = Modifier.weight(1f),
                                     selected = uiState.compania == comp,
-                                    onClick = { onSeleccionarCompania(comp) },
+                                    onClick = { viewModel.seleccionarCompania(comp) },
                                     colors = coloresChip,
                                     label = {
                                         Text(
@@ -445,8 +413,8 @@ fun FormularioConteoContent(
             Spacer(modifier = Modifier.height(4.dp))
 
             Button(
-                onClick = onEnviar,
-                enabled = !estaBloqueada,
+                onClick = { viewModel.enviarFormulario() },
+                enabled = !estaPuertaBloqueada,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(50.dp),
@@ -455,7 +423,7 @@ fun FormularioConteoContent(
                 Text(text = "Enviar Registro de Aforo", style = MaterialTheme.typography.titleMedium)
             }
 
-            if (estaBloqueada) {
+            if (estaPuertaBloqueada) {
                 AlertDialog(
                     onDismissRequest = onVolver,
                     title = { Text("Acceso Inhabilitado") },

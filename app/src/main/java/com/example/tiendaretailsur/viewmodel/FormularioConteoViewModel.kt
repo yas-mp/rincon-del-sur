@@ -138,7 +138,7 @@ class FormularioConteoViewModel(
                     _uiState.update { FormularioConteoUiState(puertaAcceso = it.puertaAcceso, envioExitoso = true) }
                 }
             } catch (_: Exception) {
-                // Ignore
+
             }
         }
     }
