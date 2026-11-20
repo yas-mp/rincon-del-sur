@@ -59,7 +59,6 @@ fun NavegacionApp(initialDarkTheme: Boolean = isSystemInDarkTheme()) {
             ) {
                 composable(Ruta.Login.ruta) {
                     LoginScreen(
-                        dbHelper = dbHelper,
                         onLoginSuccess = { usuarioAutenticado ->
                             correoUsuarioLogueado = usuarioAutenticado.correo
                             nombreUsuarioLogueado = usuarioAutenticado.nombreCompleto
