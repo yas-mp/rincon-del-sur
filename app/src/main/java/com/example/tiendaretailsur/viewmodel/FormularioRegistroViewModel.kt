@@ -74,6 +74,7 @@ class FormularioRegistroViewModel(
             estado.nombre.isBlank() -> "El nombre es obligatorio"
             estado.nombre.trim().length < 3 -> "Ingresa tu nombre completo"
             estado.nombre.length > 30 -> "El nombre no puede superar los 30 caracteres"
+            !estado.nombre.matches(Regex("^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\\s]+$")) -> "El nombre solo puede contener letras y espacios"
             else -> null
         }
         val errorCorreo = if (!Patterns.EMAIL_ADDRESS.matcher(estado.correo).matches()) {

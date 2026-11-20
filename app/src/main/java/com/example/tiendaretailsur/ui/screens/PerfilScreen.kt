@@ -22,7 +22,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Badge
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -49,17 +48,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.lifecycle.viewmodel.initializer
-import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.tiendaretailsur.R
 import com.example.tiendaretailsur.data.ConvertidorImagen
-import com.example.tiendaretailsur.data.UsuarioDbHelper
 import com.example.tiendaretailsur.permisos.Permisos
 import com.example.tiendaretailsur.ui.components.AvatarCircular
 import com.example.tiendaretailsur.ui.components.CampoContrasena
@@ -71,14 +66,9 @@ import kotlinx.coroutines.launch
 @Composable
 fun PerfilScreen(
     isAdmin: Boolean = true,
-    correoLogueado: String = "admin@rincondelsur.cl",
-    dbHelper: UsuarioDbHelper = UsuarioDbHelper(LocalContext.current),
+    correoLogueado: String = "",
     onVolver: () -> Unit = {},
-    viewModel: PerfilViewModel = viewModel(
-        factory = viewModelFactory {
-            initializer { PerfilViewModel(dbHelper) }
-        }
-    )
+    viewModel: PerfilViewModel = viewModel()
 ) {
     LaunchedEffect(correoLogueado) {
         viewModel.cargarPerfil(correoLogueado)
@@ -122,7 +112,7 @@ fun PerfilScreen(
         if (concedido) {
             try {
                 lanzadorCamara.launch(null)
-            } catch (e: ActivityNotFoundException) { }
+            } catch (_: ActivityNotFoundException) { }
         } else {
             scope.launch { snackbarHostState.showSnackbar("Permiso de cámara denegado") }
         }
@@ -142,7 +132,7 @@ fun PerfilScreen(
                     val bytes = ConvertidorImagen.aBytes(bitmapOrientado)
                     viewModel.setAvatarBytes(bytes)
                 }
-            } catch (e: Exception) { }
+            } catch (_: Exception) { }
         }
     }
 

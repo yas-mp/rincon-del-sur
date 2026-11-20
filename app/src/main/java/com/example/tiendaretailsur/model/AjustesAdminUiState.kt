@@ -2,7 +2,7 @@ package com.example.tiendaretailsur.model
 
 enum class SeccionAjustesAdmin(val titulo: String) {
     COLABORADORES("Colaboradores"),
-    PERFILES("Perfiles"),
+    PERFILES("Perfiles App"),
     TIENDA("Tienda y Cuenta")
 }
 
@@ -14,7 +14,6 @@ data class AjustesAdminUiState(
     val usuarios: List<Usuario> = emptyList(),
     val perfiles: List<ConfiguracionPerfil> = emptyList(),
     val accesos: List<ConfiguracionAcceso> = emptyList(),
-    val solicitudesCorreo: List<SolicitudCorreo> = emptyList(),
     val metaConversionTexto: String = "10.0",
 
     val usuarioEnEdicion: Usuario? = null,

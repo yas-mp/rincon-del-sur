@@ -12,7 +12,6 @@
     <string name="campo_correo">Correo electrónico</string>
     <string name="campo_telefono">Telefóno</string>
     <string name="campo_contrasena">Contraseña</string>
-    <string name="confirmar_contrasena">Confirmar contraseña</string>
     <string name="acepta_terminos">Acepto los Términos de uso y Condiciones</string>
     <string name="btn_registro">Registrar usuario</string>
     <string name="btn_limpiar">Limpiar</string>

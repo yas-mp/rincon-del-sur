@@ -1,37 +1,25 @@
 package com.example.tiendaretailsur.viewmodel
 
 import androidx.lifecycle.ViewModel
-import com.example.tiendaretailsur.data.UsuarioDbHelper
+import androidx.lifecycle.viewModelScope
+import com.example.tiendaretailsur.data.UsuarioRepository
 import com.example.tiendaretailsur.model.PasoRecuperacion
 import com.example.tiendaretailsur.model.RecuperarContrasenaUiState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
-class RecuperarContrasenaViewModel(
-    private val dbHelper: UsuarioDbHelper
-) : ViewModel() {
+class RecuperarContrasenaViewModel : ViewModel() {
+
+    private val usuarioRepository = UsuarioRepository()
 
     private val _uiState = MutableStateFlow(RecuperarContrasenaUiState())
     val uiState: StateFlow<RecuperarContrasenaUiState> = _uiState.asStateFlow()
 
-    val listaPreguntasSeg = listOf(
-        "¿Cuál es el nombre de tu primera mascota?",
-        "¿En qué ciudad naciste?",
-        "¿Cuál es tu deporte o pasatiempo favorito?",
-        "¿Cómo se llamaba tu colegio básico?",
-        "¿Cuál es tu comida favorita?"
-    )
-
-    private var preguntaGuardadaReal: String = ""
-
     fun onIdentificadorCambia(valor: String) {
         _uiState.update { it.copy(identificadorUsuario = valor, errorUsuario = null) }
-    }
-
-    fun onPregunta1Seleccionada(pregunta: String) {
-        _uiState.update { it.copy(pregunta1 = pregunta, errorRespuesta1 = null) }
     }
 
     fun onRespuesta1Cambia(valor: String) {
@@ -53,6 +41,7 @@ class RecuperarContrasenaViewModel(
     fun onAlternarConfirmarVisible() {
         _uiState.update { it.copy(confirmarContrasenaVisible = !it.confirmarContrasenaVisible) }
     }
+
     fun buscarUsuario() {
         val identificador = _uiState.value.identificadorUsuario.trim()
         if (identificador.isBlank()) {
@@ -60,55 +49,60 @@ class RecuperarContrasenaViewModel(
             return
         }
 
-        val pregunta = dbHelper.obtenerPreguntaSeguridad(identificador)
-        if (!pregunta.isNullOrBlank()) {
-            preguntaGuardadaReal = pregunta
-            _uiState.update {
-                it.copy(
-                    pasoActual = PasoRecuperacion.PREGUNTAS_SEGURIDAD,
-                    correoUsuarioEncontrado = identificador,
-                    pregunta1 = "",
-                    respuesta1 = "",
-                    errorUsuario = null
-                )
-            }
-        } else {
-            _uiState.update {
-                it.copy(errorUsuario = "No se encontró ningún colaborador con ese correo o RUT, o aún no activa su cuenta")
+        viewModelScope.launch {
+            try {
+                val pregunta = usuarioRepository.obtenerPreguntaSeguridad(identificador)
+                _uiState.update {
+                    it.copy(
+                        pasoActual = PasoRecuperacion.PREGUNTAS_SEGURIDAD,
+                        correoUsuarioEncontrado = identificador,
+                        pregunta1 = pregunta,
+                        errorUsuario = null
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(
+                        errorUsuario = e.message ?: "No se encontró ningún colaborador con ese correo o RUT"
+                    )
+                }
             }
         }
     }
+
     fun verificarRespuestas() {
         val estado = _uiState.value
         val identificador = estado.correoUsuarioEncontrado.trim()
-        val preguntaElegida = estado.pregunta1.trim()
         val respuestaIngresada = estado.respuesta1.trim()
 
-        if (preguntaElegida.isBlank()) {
-            _uiState.update { it.copy(errorRespuesta1 = "Selecciona tu pregunta de seguridad") }
-            return
-        }
         if (respuestaIngresada.isBlank()) {
             _uiState.update { it.copy(errorRespuesta1 = "Ingresa tu respuesta de seguridad") }
             return
         }
 
-        val preguntaCoincide = preguntaElegida.equals(preguntaGuardadaReal.trim(), ignoreCase = true)
-        val respuestaCorrecta = dbHelper.verificarRespuesta(identificador, respuestaIngresada)
-
-        if (preguntaCoincide && respuestaCorrecta) {
-            _uiState.update {
-                it.copy(
-                    pasoActual = PasoRecuperacion.CAMBIAR_CONTRASENA,
-                    errorRespuesta1 = null
-                )
-            }
-        } else {
-            _uiState.update {
-                it.copy(errorRespuesta1 = "La pregunta o respuesta de seguridad no coinciden")
+        viewModelScope.launch {
+            try {
+                val esCorrecta = usuarioRepository.verificarRespuesta(identificador, respuestaIngresada)
+                if (esCorrecta) {
+                    _uiState.update {
+                        it.copy(
+                            pasoActual = PasoRecuperacion.CAMBIAR_CONTRASENA,
+                            errorRespuesta1 = null
+                        )
+                    }
+                } else {
+                    _uiState.update {
+                        it.copy(errorRespuesta1 = "Respuesta de seguridad incorrecta")
+                    }
+                }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(errorRespuesta1 = e.message ?: "Error al verificar la respuesta")
+                }
             }
         }
     }
+
     fun guardarNuevaContrasena() {
         val estado = _uiState.value
         val errorNueva = validarFormatoContrasena(estado.nuevaContrasena)
@@ -131,15 +125,16 @@ class RecuperarContrasenaViewModel(
         val identificador = estado.correoUsuarioEncontrado.trim()
         val nuevaClave = estado.nuevaContrasena.trim()
 
-        val filasAfectadas = dbHelper.actualizarContrasena(identificador, nuevaClave)
-
-        if (filasAfectadas > 0) {
-            _uiState.update {
-                it.copy(pasoActual = PasoRecuperacion.COMPLETADO)
-            }
-        } else {
-            _uiState.update {
-                it.copy(errorNuevaContrasena = "Error al actualizar la contraseña")
+        viewModelScope.launch {
+            try {
+                usuarioRepository.restablecerContrasena(identificador, nuevaClave)
+                _uiState.update {
+                    it.copy(pasoActual = PasoRecuperacion.COMPLETADO)
+                }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(errorNuevaContrasena = e.message ?: "Error al actualizar la contraseña")
+                }
             }
         }
     }

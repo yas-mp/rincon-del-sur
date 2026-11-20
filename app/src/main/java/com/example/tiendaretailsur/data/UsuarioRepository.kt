@@ -164,7 +164,6 @@ class UsuarioRepository (
     }
 }
 
-
 private fun com.example.tiendaretailsur.data.remote.UsuarioResponse.aUsuario(): Usuario = Usuario(
     codigo = id.toString(),
     nombreCompleto = nombre,
@@ -174,5 +173,6 @@ private fun com.example.tiendaretailsur.data.remote.UsuarioResponse.aUsuario(): 
     correo = correo,
     telefono = telefono ?: "",
     activo = activo,
-    debeCambiarContrasena = primerIngreso
+    debeCambiarContrasena = primerIngreso,
+    avatarUrl = avatarUrl
 )

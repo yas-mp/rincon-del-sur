@@ -51,7 +51,6 @@ fun ScaffoldMenuPorRol(
     val scope = rememberCoroutineScope()
     val rol = perfilUsuario.uppercase()
 
-    // Ítems exclusivos según el rol logueado (sin cruzar paneles)
     val opcionesMenu: List<Triple<String, String, androidx.compose.ui.graphics.vector.ImageVector>> = when (rol) {
         "P-01", "JEFA_TIENDA" -> listOf(
             Triple(Ruta.AdminPanel.ruta, "Dashboard Tienda", Icons.Default.Dashboard),

@@ -19,7 +19,7 @@ class AdminDashboardViewModel(
         cargarDatosDashboard()
     }
 
-   fun cargarDatosDashboard(){
+    fun cargarDatosDashboard(){
         val listaConteos = dbHelper.listarConteos()
 
         val listaSesiones = listaConteos.mapIndexed { index, conteo ->
