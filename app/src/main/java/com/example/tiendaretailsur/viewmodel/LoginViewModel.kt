@@ -1,15 +1,17 @@
 package com.example.tiendaretailsur.viewmodel
 
 import androidx.lifecycle.ViewModel
-import com.example.tiendaretailsur.data.UsuarioDbHelper
+import androidx.lifecycle.viewModelScope
+import com.example.tiendaretailsur.data.UsuarioRepository
 import com.example.tiendaretailsur.model.LoginUiState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 class LoginViewModel(
-    private val dbHelper: UsuarioDbHelper
+    private val usuarioRepository: UsuarioRepository = UsuarioRepository()
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(LoginUiState())
@@ -45,24 +47,37 @@ class LoginViewModel(
             return
         }
 
-        val usuario = dbHelper.autenticarUsuario(correoOIdentificador, contrasena)
+        viewModelScope.launch {
+            try {
+                val usuario = usuarioRepository.iniciarSesion(correoOIdentificador, contrasena)
 
-        if (usuario != null) {
-            _uiState.update {
-                it.copy(
-                    loginExitoso = true,
-                    usuarioAutenticado = usuario,
-                    errorCorreo = null,
-                    errorContrasena = null,
-                    mensajeExitoLogin = "Bienvenido/a ${usuario.nombreCompleto} (${usuario.perfil})"
-                )
-            }
-        } else {
-            _uiState.update {
-                it.copy(
-                    loginExitoso = false,
-                    errorContrasena = "Credenciales incorrectas o usuario no encontrado"
-                )
+                if (!usuario.activo) {
+                    _uiState.update {
+                        it.copy(
+                            loginExitoso = false,
+                            usuarioAutenticado = null,
+                            errorContrasena = "Tu cuenta se encuentra deshabilitada. Contacta a Administración."
+                        )
+                    }
+                    return@launch
+                }
+
+                _uiState.update {
+                    it.copy(
+                        loginExitoso = true,
+                        usuarioAutenticado = usuario,
+                        errorCorreo = null,
+                        errorContrasena = null,
+                        mensajeExitoLogin = "Bienvenido/a ${usuario.nombreCompleto} (${usuario.perfil})"
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(
+                        loginExitoso = false,
+                        errorContrasena = e.localizedMessage ?: "Credenciales incorrectas o usuario no encontrado"
+                    )
+                }
             }
         }
     }
