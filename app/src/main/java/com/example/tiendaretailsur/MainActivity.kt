@@ -30,7 +30,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun LoginClaroPreview() {
     MiRegistroTheme(darkTheme = false) {
-        LoginScreen(dbHelper = UsuarioDbHelper(LocalContext.current))
+        LoginScreen()
     }
 }
 
@@ -38,7 +38,7 @@ private fun LoginClaroPreview() {
 @Composable
 private fun LoginOscuroPreview() {
     MiRegistroTheme(darkTheme = true) {
-        LoginScreen(dbHelper = UsuarioDbHelper(LocalContext.current))
+        LoginScreen()
     }
 }
 
@@ -46,7 +46,7 @@ private fun LoginOscuroPreview() {
 @Composable
 private fun RecuperarClaroPreview() {
     MiRegistroTheme(darkTheme = false) {
-        RecuperarContrasenaScreen(dbHelper = UsuarioDbHelper(LocalContext.current))
+        RecuperarContrasenaScreen()
     }
 }
 

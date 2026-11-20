@@ -59,7 +59,6 @@ fun NavegacionApp(initialDarkTheme: Boolean = isSystemInDarkTheme()) {
             ) {
                 composable(Ruta.Login.ruta) {
                     LoginScreen(
-                        dbHelper = dbHelper,
                         onLoginSuccess = { usuarioAutenticado ->
                             correoUsuarioLogueado = usuarioAutenticado.correo
                             nombreUsuarioLogueado = usuarioAutenticado.nombreCompleto
@@ -184,7 +183,6 @@ fun NavegacionApp(initialDarkTheme: Boolean = isSystemInDarkTheme()) {
 
                 composable(Ruta.AjustesAdmin.ruta) {
                     AjustesAdminScreen(
-                        dbHelper = dbHelper,
                         seccionInicial = SeccionAjustesAdmin.COLABORADORES,
                         onVolverClick = {
                             navController.navigate(Ruta.Login.ruta) {

@@ -64,12 +64,7 @@ import com.example.tiendaretailsur.viewmodel.LoginViewModel
 
 @Composable
 fun LoginScreen(
-    dbHelper: UsuarioDbHelper,
-    viewModel: LoginViewModel = viewModel(
-        factory = viewModelFactory {
-            initializer { LoginViewModel(dbHelper) }
-        }
-    ),
+    viewModel: LoginViewModel = viewModel(),
     onLoginSuccess: (Usuario) -> Unit = {},
     onOlvideContrasenaClick: () -> Unit = {},
     onCrearCuentaClick: () -> Unit = {}

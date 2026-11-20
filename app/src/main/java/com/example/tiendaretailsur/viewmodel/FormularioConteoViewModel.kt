@@ -2,66 +2,68 @@ package com.example.tiendaretailsur.viewmodel
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
-import com.example.tiendaretailsur.data.UsuarioDbHelper
+import androidx.lifecycle.viewModelScope
+import com.example.tiendaretailsur.data.AccesoRepository
+import com.example.tiendaretailsur.data.ConteoRepository
+import com.example.tiendaretailsur.data.GestorSesion
+import com.example.tiendaretailsur.data.UsuarioRepository
 import com.example.tiendaretailsur.model.AccesoTienda
 import com.example.tiendaretailsur.model.FormularioConteoUiState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
-class FormularioConteoViewModel : AndroidViewModel {
-    private val dbHelper: UsuarioDbHelper?
+class FormularioConteoViewModel(
+    application: Application,
+    private val conteoRepository: ConteoRepository = ConteoRepository(),
+    private val accesoRepository: AccesoRepository = AccesoRepository(),
+    private val usuarioRepository: UsuarioRepository = UsuarioRepository()
+) : AndroidViewModel(application) {
 
-    constructor() : super(Application()) {
-        dbHelper = null
-    }
-
-    constructor(application: Application) : super(application) {
-        dbHelper = UsuarioDbHelper(application)
-        cargarPuertasHabilitadas()
-    }
+    private val gestorSesion = GestorSesion(application)
 
     private val _uiState = MutableStateFlow(FormularioConteoUiState())
     val uiState: StateFlow<FormularioConteoUiState> = _uiState.asStateFlow()
 
+    private var _puertasHabilitadas = listOf<AccesoTienda>()
+
+    init {
+        cargarPuertasHabilitadas()
+    }
+
     fun cargarPuertasHabilitadas() {
-        val db = dbHelper ?: return
-        val accesosHabilitados = try {
-            db.listarPuertas().filter { it.estaHabilitado }
-        } catch (e: Exception) {
-            emptyList()
-        }
+        viewModelScope.launch {
+            try {
+                val accesos = accesoRepository.listar()
+                _puertasHabilitadas = accesos.filter { it.estaHabilitado }
 
-        _uiState.update { estado ->
-            val puertaValida = if (accesosHabilitados.any { it.nombre.equals(estado.puertaAcceso, ignoreCase = true) || it.id.equals(estado.puertaAcceso, ignoreCase = true) }) {
-                estado.puertaAcceso
-            } else {
-                accesosHabilitados.firstOrNull()?.id ?: accesosHabilitados.firstOrNull()?.nombre ?: ""
+                _uiState.update { estado ->
+                    val puertaValida = if (_puertasHabilitadas.any { it.nombre.equals(estado.puertaAcceso, ignoreCase = true) || it.id.equals(estado.puertaAcceso, ignoreCase = true) }) {
+                        estado.puertaAcceso
+                    } else {
+                        _puertasHabilitadas.firstOrNull()?.id ?: _puertasHabilitadas.firstOrNull()?.nombre ?: ""
+                    }
+                    estado.copy(puertaAcceso = puertaValida)
+                }
+            } catch (_: Exception) {
+                _puertasHabilitadas = emptyList()
             }
-
-            estado.copy(puertaAcceso = puertaValida)
         }
     }
 
     fun obtenerPuertasHabilitadas(): List<AccesoTienda> {
-        return try {
-            dbHelper?.listarPuertas()?.filter { it.estaHabilitado } ?: emptyList()
-        } catch (e: Exception) {
-            emptyList()
-        }
+        return _puertasHabilitadas
     }
 
     fun estaPuertaActualBloqueada(): Boolean {
-        val db = dbHelper ?: return false
         val puertaActual = _uiState.value.puertaAcceso
         if (puertaActual.isBlank()) return false
 
-        val puertas = try { db.listarPuertas() } catch (e: Exception) { emptyList() }
-        val puertaEncontrada = puertas.find {
+        val puertaEncontrada = _puertasHabilitadas.find {
             it.id.equals(puertaActual, ignoreCase = true) || it.nombre.equals(puertaActual, ignoreCase = true)
         }
-
         return puertaEncontrada != null && !puertaEncontrada.estaHabilitado
     }
 
@@ -107,10 +109,38 @@ class FormularioConteoViewModel : AndroidViewModel {
         }
 
         val estado = _uiState.value
-        val db = dbHelper ?: return
 
-        db.registrarFormularioConteo(estado, "Andrea Valencia", "12h")
-        _uiState.update { FormularioConteoUiState(puertaAcceso = it.puertaAcceso, envioExitoso = true) }
+        viewModelScope.launch {
+            try {
+                val idUsuario = gestorSesion.obtenerIdUsuarioLogueado()
+                val correo = gestorSesion.obtenerCorreoUsuarioLogueado()
+
+                // Obtener nombre del observador real desde el repositorio usando la sesión
+                var nombreObservador = correo.ifBlank { "Usuario Sistema" }
+                if (idUsuario != -1L) {
+                    try {
+                        val usuario = usuarioRepository.obtener(idUsuario)
+                        if (usuario.nombreCompleto.isNotBlank()) {
+                            nombreObservador = usuario.nombreCompleto
+                        }
+                    } catch (_: Exception) {
+                        // Fallback
+                    }
+                }
+
+                val exito = conteoRepository.registrar(
+                    uiState = estado,
+                    observador = nombreObservador,
+                    hora = "12h",
+                    usuarioId = if (idUsuario != -1L) idUsuario else null
+                )
+                if (exito) {
+                    _uiState.update { FormularioConteoUiState(puertaAcceso = it.puertaAcceso, envioExitoso = true) }
+                }
+            } catch (_: Exception) {
+
+            }
+        }
     }
 
     fun limpiarExitoso() {
