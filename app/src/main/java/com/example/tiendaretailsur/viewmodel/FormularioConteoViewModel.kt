@@ -5,6 +5,8 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.tiendaretailsur.data.AccesoRepository
 import com.example.tiendaretailsur.data.ConteoRepository
+import com.example.tiendaretailsur.data.GestorSesion
+import com.example.tiendaretailsur.data.UsuarioRepository
 import com.example.tiendaretailsur.model.AccesoTienda
 import com.example.tiendaretailsur.model.FormularioConteoUiState
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -16,8 +18,11 @@ import kotlinx.coroutines.launch
 class FormularioConteoViewModel(
     application: Application,
     private val conteoRepository: ConteoRepository = ConteoRepository(),
-    private val accesoRepository: AccesoRepository = AccesoRepository()
+    private val accesoRepository: AccesoRepository = AccesoRepository(),
+    private val usuarioRepository: UsuarioRepository = UsuarioRepository()
 ) : AndroidViewModel(application) {
+
+    private val gestorSesion = GestorSesion(application)
 
     private val _uiState = MutableStateFlow(FormularioConteoUiState())
     val uiState: StateFlow<FormularioConteoUiState> = _uiState.asStateFlow()
@@ -42,7 +47,7 @@ class FormularioConteoViewModel(
                     }
                     estado.copy(puertaAcceso = puertaValida)
                 }
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 _puertasHabilitadas = emptyList()
             }
         }
@@ -107,17 +112,33 @@ class FormularioConteoViewModel(
 
         viewModelScope.launch {
             try {
+                val idUsuario = gestorSesion.obtenerIdUsuarioLogueado()
+                val correo = gestorSesion.obtenerCorreoUsuarioLogueado()
+
+                // Obtener nombre del observador real desde el repositorio usando la sesión
+                var nombreObservador = correo.ifBlank { "Usuario Sistema" }
+                if (idUsuario != -1L) {
+                    try {
+                        val usuario = usuarioRepository.obtener(idUsuario)
+                        if (usuario.nombreCompleto.isNotBlank()) {
+                            nombreObservador = usuario.nombreCompleto
+                        }
+                    } catch (_: Exception) {
+                        // Fallback
+                    }
+                }
+
                 val exito = conteoRepository.registrar(
                     uiState = estado,
-                    observador = "Andrea Valencia",
+                    observador = nombreObservador,
                     hora = "12h",
-                    usuarioId = null
+                    usuarioId = if (idUsuario != -1L) idUsuario else null
                 )
                 if (exito) {
                     _uiState.update { FormularioConteoUiState(puertaAcceso = it.puertaAcceso, envioExitoso = true) }
                 }
-            } catch (e: Exception) {
-                e.printStackTrace()
+            } catch (_: Exception) {
+                // Ignore
             }
         }
     }

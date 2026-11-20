@@ -92,13 +92,8 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AjustesAdminScreen(
-    dbHelper: UsuarioDbHelper,
     seccionInicial: SeccionAjustesAdmin = SeccionAjustesAdmin.COLABORADORES,
-    viewModel: AjustesAdminViewModel = viewModel(
-        factory = viewModelFactory {
-            initializer { AjustesAdminViewModel(dbHelper) }
-        }
-    ),
+    viewModel: AjustesAdminViewModel = viewModel(),
     onVolverClick: () -> Unit = {},
     onIrAMiPerfilClick: () -> Unit = {},
     onIrARegistroColaborador: () -> Unit = {},

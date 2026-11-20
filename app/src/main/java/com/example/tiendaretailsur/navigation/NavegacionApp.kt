@@ -184,7 +184,6 @@ fun NavegacionApp(initialDarkTheme: Boolean = isSystemInDarkTheme()) {
 
                 composable(Ruta.AjustesAdmin.ruta) {
                     AjustesAdminScreen(
-                        dbHelper = dbHelper,
                         seccionInicial = SeccionAjustesAdmin.COLABORADORES,
                         onVolverClick = {
                             navController.navigate(Ruta.Login.ruta) {

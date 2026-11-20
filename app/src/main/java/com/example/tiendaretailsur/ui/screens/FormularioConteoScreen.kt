@@ -47,7 +47,6 @@ import com.example.tiendaretailsur.viewmodel.FormularioConteoViewModel
 @Composable
 fun FormularioConteoScreen(
     puertaInicial: String = "A1",
-    nombreObservador: String = "",
     modifier: Modifier = Modifier,
     viewModel: FormularioConteoViewModel = viewModel(),
     onVolver: () -> Unit = {}
@@ -63,14 +62,14 @@ fun FormularioConteoScreen(
         uiState = uiState,
         estaBloqueada = estaPuertaBloqueada,
         modifier = modifier,
-        onIncrementarTransito = { viewModel.incrementarTransito(1) },
+        onIncrementarTransito = { viewModel.incrementarTransito() },
         onDecrementarTransito = viewModel::decrementarTransito,
-        onIncrementarClientes = { cantidad -> viewModel.incrementarClientes(cantidad) },
+        onIncrementarClientes = { viewModel.incrementarClientes() },
         onDecrementarClientes = viewModel::decrementarClientes,
         onSeleccionarEdad = viewModel::seleccionarRangoEtario,
         onSeleccionarCompania = viewModel::seleccionarCompania,
-        onEnviar = { viewModel.enviarFormulario(nombreObservador) },
-        onLimpiarFeedback = viewModel::limpiarMensajeFeedback,
+        onEnviar = { viewModel.enviarFormulario() },
+        onLimpiarFeedback = viewModel::limpiarExitoso,
         onVolver = onVolver
     )
 }
