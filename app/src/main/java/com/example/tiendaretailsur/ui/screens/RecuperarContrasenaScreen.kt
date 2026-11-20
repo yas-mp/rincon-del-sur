@@ -21,52 +21,59 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.lifecycle.viewmodel.initializer
-import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.tiendaretailsur.R
-import com.example.tiendaretailsur.data.UsuarioDbHelper
 import com.example.tiendaretailsur.model.PasoRecuperacion
 import com.example.tiendaretailsur.ui.components.CampoContrasena
 import com.example.tiendaretailsur.ui.components.CampoTexto
 import com.example.tiendaretailsur.ui.theme.Dimens
-import com.example.tiendaretailsur.ui.theme.Exito
-import com.example.tiendaretailsur.ui.theme.ExitoFondo
 import com.example.tiendaretailsur.viewmodel.RecuperarContrasenaViewModel
 
 @Composable
 fun RecuperarContrasenaScreen(
-    dbHelper: UsuarioDbHelper,
-    viewModel: RecuperarContrasenaViewModel = viewModel(
-        factory = viewModelFactory {
-            initializer { RecuperarContrasenaViewModel(dbHelper) }
-        }
-    ),
+    viewModel: RecuperarContrasenaViewModel = viewModel(),
     onVolverALoginClick: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val colores = MaterialTheme.colorScheme
     val tipografia = MaterialTheme.typography
     val formas = MaterialTheme.shapes
+    val snackbarHostState = remember { SnackbarHostState() }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(colores.background)
-            .padding(Dimens.espacioGrande)
-    ) {
+    LaunchedEffect(uiState.pasoActual) {
+        if (uiState.pasoActual == PasoRecuperacion.COMPLETADO) {
+            snackbarHostState.showSnackbar(
+                message = "¡Contraseña actualizada con éxito! Ya puedes iniciar sesión.",
+                duration = SnackbarDuration.Short
+            )
+            onVolverALoginClick()
+        }
+    }
+
+    Scaffold(
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
+        containerColor = colores.background
+    ) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .padding(innerPadding)
+                .padding(Dimens.espacioGrande)
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(Dimens.espacioMedio)
         ) {
@@ -158,11 +165,13 @@ fun RecuperarContrasenaScreen(
                             color = colores.onSurfaceVariant
                         )
 
-                        Text(
-                            text = uiState.pregunta1,
-                            style = tipografia.labelLarge,
-                            color = colores.onSurfaceVariant
+                        CampoTexto(
+                            valor = uiState.pregunta1,
+                            onValorCambia = {},
+                            etiqueta = "Pregunta de seguridad registrada",
+                            icono = R.drawable.ic_candado
                         )
+
                         CampoTexto(
                             valor = uiState.respuesta1,
                             onValorCambia = viewModel::onRespuesta1Cambia,
@@ -240,33 +249,6 @@ fun RecuperarContrasenaScreen(
                                 style = tipografia.labelLarge
                             )
                         }
-                    }
-                }
-            }
-
-            if (uiState.pasoActual == PasoRecuperacion.COMPLETADO) {
-                Card(
-                    shape = formas.large,
-                    colors = CardDefaults.cardColors(
-                        containerColor = ExitoFondo,
-                        contentColor = Exito
-                    ),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(
-                        modifier = Modifier.padding(Dimens.espacioMedio),
-                        verticalArrangement = Arrangement.spacedBy(Dimens.espacioChico)
-                    ) {
-                        Text(
-                            text = "¡Contraseña actualizada con éxito!",
-                            style = tipografia.titleMedium,
-                            color = Exito
-                        )
-                        Text(
-                            text = "Tu contraseña ha sido actualizada correctamente en la base de datos. Ya puedes iniciar sesión con tus nuevas credenciales.",
-                            style = tipografia.bodyMedium,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
                     }
                 }
             }

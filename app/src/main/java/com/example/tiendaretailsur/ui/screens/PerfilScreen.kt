@@ -17,8 +17,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Badge
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -27,11 +31,13 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -42,36 +48,27 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.lifecycle.viewmodel.initializer
-import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.tiendaretailsur.R
 import com.example.tiendaretailsur.data.ConvertidorImagen
-import com.example.tiendaretailsur.data.UsuarioDbHelper
 import com.example.tiendaretailsur.permisos.Permisos
 import com.example.tiendaretailsur.ui.components.AvatarCircular
+import com.example.tiendaretailsur.ui.components.CampoContrasena
 import com.example.tiendaretailsur.ui.theme.MiRegistroTheme
 import com.example.tiendaretailsur.viewmodel.PerfilViewModel
 import kotlinx.coroutines.launch
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PerfilScreen(
     isAdmin: Boolean = true,
-    correoLogueado: String = "admin@rincondelsur.cl",
-    dbHelper: UsuarioDbHelper = UsuarioDbHelper(LocalContext.current),
+    correoLogueado: String = "",
     onVolver: () -> Unit = {},
-    viewModel: PerfilViewModel = viewModel(
-        factory = viewModelFactory {
-            initializer { PerfilViewModel(dbHelper) }
-        }
-    )
+    viewModel: PerfilViewModel = viewModel()
 ) {
     LaunchedEffect(correoLogueado) {
         viewModel.cargarPerfil(correoLogueado)
@@ -82,6 +79,13 @@ fun PerfilScreen(
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+
+    LaunchedEffect(uiState.mensajeSnackbar) {
+        uiState.mensajeSnackbar?.let { mensaje ->
+            snackbarHostState.showSnackbar(mensaje)
+            viewModel.onSnackbarMostrado()
+        }
+    }
 
     val foto = remember(uiState.avatarBytes) {
         uiState.avatarBytes?.let { bytes -> ConvertidorImagen.aBitmap(bytes)?.asImageBitmap() }
@@ -108,7 +112,7 @@ fun PerfilScreen(
         if (concedido) {
             try {
                 lanzadorCamara.launch(null)
-            } catch (e: ActivityNotFoundException) { }
+            } catch (_: ActivityNotFoundException) { }
         } else {
             scope.launch { snackbarHostState.showSnackbar("Permiso de cámara denegado") }
         }
@@ -128,7 +132,7 @@ fun PerfilScreen(
                     val bytes = ConvertidorImagen.aBytes(bitmapOrientado)
                     viewModel.setAvatarBytes(bytes)
                 }
-            } catch (e: Exception) { }
+            } catch (_: Exception) { }
         }
     }
 
@@ -149,7 +153,10 @@ fun PerfilScreen(
                 title = { Text(if (isAdmin) "Perfil de Administrador" else "Perfil de Colaborador") },
                 navigationIcon = {
                     IconButton(onClick = onVolver) {
-                        Icon(painter = painterResource(R.drawable.atras), contentDescription = "Volver")
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Volver al panel"
+                        )
                     }
                 }
             )
@@ -215,6 +222,25 @@ fun PerfilScreen(
                             Text(text = perfil.turno, color = MaterialTheme.colorScheme.onPrimary)
                         }
                     }
+
+                    HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
+
+                    if (uiState.tieneSolicitudCorreoPendiente) {
+                        Text(
+                            text = "Tienes una solicitud de cambio de correo pendiente de aprobación por el Subgerente.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Medium
+                        )
+                    } else {
+                        OutlinedButton(
+                            onClick = { viewModel.abrirDialogoCorreo() },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(MaterialTheme.colorScheme.onSurface)
+                        ) {
+                            Text("Solicitar cambio de correo")
+                        }
+                    }
                 }
             }
 
@@ -228,7 +254,7 @@ fun PerfilScreen(
                 ) {
                     Text(text = "Foto de Perfil", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     Text(
-                        text = if (isAdmin) "Como administrador, puedes actualizar tu foto y gestionar el perfil." else "Como colaborador, esta es la única sección que puedes modificar en tu perfil.",
+                        text = if (isAdmin) "Como administrador, puedes actualizar tu foto y gestionar el perfil." else "Actualiza tu fotografía de perfil desde la cámara o galería.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                     )
@@ -269,6 +295,61 @@ fun PerfilScreen(
                 }
             }
 
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(
+                        text = "Seguridad y Contraseña",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "Actualiza tu clave de acceso ingresando tu contraseña actual y una nueva.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                    )
+
+                    CampoContrasena(
+                        valor = uiState.contrasenaActual,
+                        onValorCambia = viewModel::onContrasenaActualCambia,
+                        etiqueta = "Contraseña actual",
+                        visible = uiState.contrasenaActualVisible,
+                        onAlternarContrasenaVisible = viewModel::onAlternarActualVisible,
+                        error = uiState.errorContrasenaActual
+                    )
+
+                    CampoContrasena(
+                        valor = uiState.nuevaContrasena,
+                        onValorCambia = viewModel::onNuevaContrasenaCambia,
+                        etiqueta = "Nueva contraseña",
+                        visible = uiState.nuevaContrasenaVisible,
+                        onAlternarContrasenaVisible = viewModel::onAlternarNuevaVisible,
+                        error = uiState.errorNuevaContrasena
+                    )
+
+                    CampoContrasena(
+                        valor = uiState.confirmarContrasena,
+                        onValorCambia = viewModel::onConfirmarContrasenaCambia,
+                        etiqueta = "Confirmar nueva contraseña",
+                        visible = uiState.confirmarContrasenaVisible,
+                        onAlternarContrasenaVisible = viewModel::onAlternarConfirmarVisible,
+                        error = uiState.errorConfirmarContrasena
+                    )
+
+                    Button(
+                        onClick = { viewModel.cambiarContrasena() },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Actualizar contraseña")
+                    }
+                }
+            }
+
             if (isAdmin) {
                 Card(
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -284,6 +365,55 @@ fun PerfilScreen(
                     }
                 }
             }
+        }
+
+        if (uiState.dialogoCorreoAbierto) {
+            AlertDialog(
+                onDismissRequest = viewModel::cerrarDialogoCorreo,
+                title = { Text("Solicitar Cambio de Correo") },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text(
+                            text = "Por seguridad, el correo no se edita directamente. Tu solicitud será revisada por el Subgerente.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        OutlinedTextField(
+                            value = perfil.correo,
+                            onValueChange = {},
+                            enabled = false,
+                            label = { Text("Correo actual") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = uiState.nuevoCorreoSolicitado,
+                            onValueChange = viewModel::onNuevoCorreoSolicitadoCambia,
+                            label = { Text("Nuevo correo electrónico") },
+                            isError = uiState.errorNuevoCorreo != null,
+                            supportingText = {
+                                uiState.errorNuevoCorreo?.let { Text(it) }
+                            },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = uiState.motivoCorreoSolicitado,
+                            onValueChange = viewModel::onMotivoCorreoCambia,
+                            label = { Text("Motivo (opcional)") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                },
+                confirmButton = {
+                    Button(onClick = viewModel::enviarSolicitudCambioCorreo) {
+                        Text("Enviar Solicitud")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = viewModel::cerrarDialogoCorreo) {
+                        Text("Cancelar")
+                    }
+                }
+            )
         }
     }
 }

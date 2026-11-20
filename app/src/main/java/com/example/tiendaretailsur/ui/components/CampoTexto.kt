@@ -14,14 +14,58 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.OffsetMapping
+import androidx.compose.ui.text.input.TransformedText
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.tiendaretailsur.ui.styles.EstiloCampo
 import com.example.tiendaretailsur.ui.theme.Dimens
 import com.example.tiendaretailsur.ui.theme.FondoAppClaro
 import com.example.tiendaretailsur.ui.theme.MiRegistroTheme
+
+class RutVisualTransformation : VisualTransformation {
+    override fun filter(text: AnnotatedString): TransformedText {
+        val raw = text.text
+        if (raw.isEmpty()) return TransformedText(text, OffsetMapping.Identity)
+
+        val formatted = if (raw.length == 1) {
+            raw
+        } else {
+            val dv = raw.last()
+            val body = raw.dropLast(1)
+            val bodyFormatted = body.reversed().chunked(3).joinToString(".").reversed()
+            "$bodyFormatted-$dv"
+        }
+
+        val offsetMapping = object : OffsetMapping {
+            override fun originalToTransformed(offset: Int): Int {
+                if (raw.length <= 1 || offset <= 0) return offset
+                if (offset >= raw.length) return formatted.length
+
+                var count = 0
+                for (i in formatted.indices) {
+                    if (formatted[i] != '.' && formatted[i] != '-') {
+                        count++
+                        if (count == offset) return i + 1
+                    }
+                }
+                return formatted.length
+            }
+
+            override fun transformedToOriginal(offset: Int): Int {
+                if (offset <= 0) return 0
+                return formatted.take(offset.coerceAtMost(formatted.length))
+                    .count { it != '.' && it != '-' }
+            }
+        }
+
+        return TransformedText(AnnotatedString(formatted), offsetMapping)
+    }
+}
 
 @Composable
 fun CampoTexto(
@@ -79,6 +123,7 @@ fun CampoTextoRut(
         value = valor,
         onValueChange = onValorCambia,
         modifier = modifier.fillMaxWidth(),
+        visualTransformation = RutVisualTransformation(),
         placeholder = {
             Text(
                 text = etiqueta,
@@ -117,7 +162,7 @@ private fun CampoTextoPreview() {
                 .padding(16.dp)
         ) {
             CampoTextoRut(
-                valor = "18.866333-8",
+                valor = "188663338",
                 onValorCambia = {},
                 etiqueta = "Rut"
             )

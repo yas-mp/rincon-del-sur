@@ -1,16 +1,21 @@
 package com.example.tiendaretailsur.viewmodel
 
-import androidx.lifecycle.ViewModel
-import com.example.tiendaretailsur.data.UsuarioDbHelper
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import com.example.tiendaretailsur.data.GestorSesion
+import com.example.tiendaretailsur.data.UsuarioRepository
 import com.example.tiendaretailsur.model.PrimerIngresoUiState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
-class PrimerIngresoViewModel(
-    private val dbHelper: UsuarioDbHelper
-) : ViewModel() {
+class PrimerIngresoViewModel(application: Application) : AndroidViewModel(application) {
+
+    private val gestorSesion = GestorSesion(application)
+    private val usuarioRepository = UsuarioRepository()
 
     private val _uiState = MutableStateFlow(PrimerIngresoUiState())
     val uiState: StateFlow<PrimerIngresoUiState> = _uiState.asStateFlow()
@@ -63,7 +68,7 @@ class PrimerIngresoViewModel(
         }
     }
 
-    fun onGuardarConfiguracion(rutOCorreoUsuario: String) {
+    fun onGuardarConfiguracion(rutOCorreoUsuario: String = "") {
         val estado = _uiState.value
 
         val errorNueva = validarContrasena(estado.nuevaContrasena)
@@ -93,18 +98,41 @@ class PrimerIngresoViewModel(
             return
         }
 
-        val filasActualizadas = dbHelper.completarPrimerIngreso(
-            rutOCorreo = rutOCorreoUsuario,
-            nuevaContrasena = estado.nuevaContrasena,
-            preguntaSeguridad = estado.preguntaSeleccionada,
-            respuestaSeguridad = estado.respuestaSeguridad
-        )
+        viewModelScope.launch {
+            try {
+                // 1. Obtener el ID desde GestorSesion, o buscarlo por rut/correo si no está en sesión
+                var idUsuario = gestorSesion.obtenerIdUsuarioLogueado()
+                if (idUsuario == -1L && rutOCorreoUsuario.isNotBlank()) {
+                    val encontrado = usuarioRepository.listar(rutOCorreoUsuario).firstOrNull()
+                    idUsuario = encontrado?.codigo?.toLongOrNull() ?: -1L
+                }
 
-        if (filasActualizadas > 0) {
-            _uiState.update { it.copy(configuracionExitosa = true) }
-        } else {
-            _uiState.update {
-                it.copy(errorGeneral = "No se pudo actualizar la cuenta. Intenta nuevamente.")
+                if (idUsuario == -1L) {
+                    _uiState.update {
+                        it.copy(errorGeneral = "No se encontró el usuario activo. Vuelve a iniciar sesión.")
+                    }
+                    return@launch
+                }
+
+                // 2. Llamar al endpoint de primer ingreso
+                val usuarioActualizado = usuarioRepository.completarPrimerIngreso(
+                    id = idUsuario,
+                    nuevaContrasena = estado.nuevaContrasena,
+                    pregunta = estado.preguntaSeleccionada,
+                    respuesta = estado.respuestaSeguridad
+                )
+
+                // 3. Asegurar que la sesión quede guardada con sus datos actualizados
+                gestorSesion.guardarSesion(
+                    idUsuario = usuarioActualizado.codigo.toLongOrNull() ?: idUsuario,
+                    correo = usuarioActualizado.correo
+                )
+
+                _uiState.update { it.copy(configuracionExitosa = true) }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(errorGeneral = e.message ?: "No se pudo actualizar la cuenta. Intenta nuevamente.")
+                }
             }
         }
     }

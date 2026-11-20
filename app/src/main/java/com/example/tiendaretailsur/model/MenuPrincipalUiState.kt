@@ -21,17 +21,6 @@ data class ResumenDiario(
     val observaciones: String = ""
 )
 
-data class ReporteHorario(
-    val bloque: String,
-    val a1: Int,
-    val a2: Int,
-    val a3: Int,
-    val a4: Int,
-    val total: Int,
-    val boletas: Int,
-    val conversion: Double
-)
-
 data class MenuPrincipalUiState(
     val ultimoResumen: ResumenDiario? = null,
     val listaAccesos: List<AccesoTienda> = emptyList(),

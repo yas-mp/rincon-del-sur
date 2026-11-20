@@ -1,5 +1,6 @@
 package com.example.tiendaretailsur.viewmodel
 
+import android.util.Patterns
 import androidx.lifecycle.ViewModel
 import com.example.tiendaretailsur.data.UsuarioDbHelper
 import com.example.tiendaretailsur.model.FormularioRegistroUiState
@@ -15,29 +16,23 @@ class FormularioRegistroViewModel(
     private val _uiState = MutableStateFlow(FormularioRegistroUiState())
     val uiState: StateFlow<FormularioRegistroUiState> = _uiState.asStateFlow()
 
-    val listaPreguntasSeg = listOf(
-        "¿Cuál es el nombre de tu primera mascota?",
-        "¿En qué ciudad nacieron tus padres?",
-        "¿Cuál es tu deporte o pasatiempo favorito?",
-        "¿Cuál fue el nombre de tu primera escuela?"
-    )
-
-    fun onPreguntaSeleccionada(pregunta: String) {
-        _uiState.update {
-            it.copy(preguntaSeleccionada = pregunta, errorPregunta = null, registroExitoso = false)
-        }
-    }
-
-    fun onRespuestaCambia(respuesta: String) {
-        _uiState.update {
-            it.copy(respuestaSeguridad = respuesta, errorRespuesta = null, registroExitoso = false)
+    private fun generarContrasena(): String {
+        val mayusculas = "ABCDEFGHJKLMNPQRSTUVWXYZ"
+        val minusculas = "abcdefghijkmnopqrstuvwxyz"
+        val numeros = "23456789"
+        return buildString {
+            append(mayusculas.random())
+            append(minusculas.random())
+            repeat(4) { append(numeros.random()) }
+            append(mayusculas.random())
+            append(minusculas.random())
         }
     }
 
     fun onRutCambia(nuevoRut: String) {
-        val rutFormateado = autoCompletadoRut(nuevoRut)
+        val rutLimpio = nuevoRut.replace("[^0-9kK]".toRegex(), "").uppercase().take(9)
         _uiState.update {
-            it.copy(rut = rutFormateado, errorFormatoRut = null, registroExitoso = false)
+            it.copy(rut = rutLimpio, errorFormatoRut = null, registroExitoso = false)
         }
     }
 
@@ -60,64 +55,57 @@ class FormularioRegistroViewModel(
         }
     }
 
-    fun onContrasenaCambia(valor: String) {
-        _uiState.update {
-            it.copy(contrasena = valor, errorContrasena = null, registroExitoso = false)
-        }
-    }
-
-    fun onAlternarContrasenaVisible() {
-        _uiState.update { it.copy(contrasenaVisible = !it.contrasenaVisible) }
-    }
-
-    fun onTerminosCambia(valor: Boolean) {
-        _uiState.update { it.copy(aceptarTerminos = valor, errorTerminos = null) }
+    fun onSeleccionRol(rol: RolUsuario) {
+        _uiState.update { it.copy(rolSeleccionado = rol, registroExitoso = false) }
     }
 
     fun onLimpiarFormulario() {
         _uiState.value = FormularioRegistroUiState()
     }
-
-    fun onSeleccionRol(rol: RolUsuario) {
-        _uiState.update { it.copy(rolSeleccionado = rol) }
+    fun onTerminosCambia(valor: Boolean) {
+        _uiState.update { it.copy(aceptarTerminos = valor, errorTerminos = null) }
     }
 
     fun onRegistrar() {
         val estado = _uiState.value
 
         var errorRut = if (!validarFormatoRut(estado.rut)) "El RUT no tiene un formato válido" else null
-        val errorNombre = if (estado.nombre.isBlank()) "El nombre es obligatorio" else null
-        val errorCorreo = if (!estado.correo.contains("@") || !estado.correo.contains(".")) {
+        val errorNombre = when {
+            estado.nombre.isBlank() -> "El nombre es obligatorio"
+            estado.nombre.trim().length < 3 -> "Ingresa tu nombre completo"
+            estado.nombre.length > 30 -> "El nombre no puede superar los 30 caracteres"
+            !estado.nombre.matches(Regex("^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\\s]+$")) -> "El nombre solo puede contener letras y espacios"
+            else -> null
+        }
+        val errorCorreo = if (!Patterns.EMAIL_ADDRESS.matcher(estado.correo).matches()) {
             "Ingrese un correo válido"
         } else null
-        val errorTelefono = if (estado.telefono.length < 9) {
-            "El número de teléfono debe tener 9 dígitos"
-        } else null
-        val errorContrasena = validarContrasena(estado.contrasena)
+        val errorTelefono = when {
+            estado.telefono.length < 9 -> "El teléfono debe tener 9 dígitos"
+            else -> null
+        }
         val errorTerminos = if (!estado.aceptarTerminos) "Debes aceptar los términos" else null
-
-        val errorPregunta = if (estado.preguntaSeleccionada.isBlank()) "Selecciona una pregunta de seguridad" else null
-        val errorRespuesta = if (estado.respuestaSeguridad.isBlank()) "Ingresa tu respuesta de seguridad" else null
 
         val siHayErrores = listOf(
             errorRut,
             errorNombre,
             errorCorreo,
             errorTelefono,
-            errorContrasena,
             errorTerminos,
-            errorPregunta,
-            errorRespuesta
         ).any { it != null }
 
         var guardar = false
+        var claveGenerada = ""
 
         if (!siHayErrores) {
-            val resultado = dbHelper.registroUsuarioFormularioRegistro(estado)
+            claveGenerada = generarContrasena()
+            val estadoParaGuardar = estado.copy(rut = autoCompletadoRut(estado.rut))
+            val resultado = dbHelper.registroUsuarioFormularioRegistro(estadoParaGuardar, claveGenerada)
             if (resultado != -1L) {
                 guardar = true
             } else {
-                errorRut = "El RUT o correo ya se encuentra registrado"
+                errorRut = "El RUT ya se encuentra registrado"
+                claveGenerada = ""
             }
         }
 
@@ -127,10 +115,8 @@ class FormularioRegistroViewModel(
                 errorNombre = errorNombre,
                 errorFormatoCorreo = errorCorreo,
                 errorTelefono = errorTelefono,
-                errorContrasena = errorContrasena,
                 errorTerminos = errorTerminos,
-                errorPregunta = errorPregunta,
-                errorRespuesta = errorRespuesta,
+                contrasenaTemporalGenerada = claveGenerada,
                 registroExitoso = guardar
             )
         }
@@ -175,13 +161,5 @@ class FormularioRegistroViewModel(
         if (cuerpo.isEmpty()) return dv.toString()
         val cuerpoFormateado = cuerpo.reversed().chunked(3).joinToString(".").reversed()
         return "$cuerpoFormateado-$dv"
-    }
-
-    private fun validarContrasena(contrasena: String): String? {
-        if (contrasena.length < 8) return "La contraseña debe tener al menos 8 caracteres"
-        if (!contrasena.any { it.isUpperCase() }) return "La contraseña debe tener al menos una mayúscula"
-        if (!contrasena.any { it.isLowerCase() }) return "La contraseña debe tener al menos una minúscula"
-        if (!contrasena.any { it.isDigit() }) return "La contraseña debe tener al menos un número"
-        return null
     }
 }

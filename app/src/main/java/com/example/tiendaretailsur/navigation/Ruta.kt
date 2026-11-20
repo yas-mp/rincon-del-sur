@@ -9,5 +9,6 @@ sealed class Ruta(val ruta: String) {
     data object AjustesAdmin : Ruta("ajustes_admin")
     data object Perfil : Ruta("perfil")
     data object FormularioRegistro : Ruta("formulario_registro")
+    data object PrimerIngreso : Ruta("primer_ingreso")
 
 }

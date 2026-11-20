@@ -19,7 +19,7 @@ class AdminDashboardViewModel(
         cargarDatosDashboard()
     }
 
-    private fun cargarDatosDashboard(){
+    fun cargarDatosDashboard(){
         val listaConteos = dbHelper.listarConteos()
 
         val listaSesiones = listaConteos.mapIndexed { index, conteo ->
@@ -27,7 +27,7 @@ class AdminDashboardViewModel(
                 id = (index + 1).toLong(),
                 observador = conteo.observador,
                 hora = conteo.hora,
-                conteo = conteo.cantidadClientes,
+                conteo = conteo.cantidadClientes + conteo.cantidadTransito,
                 estado = 1
             )
         }

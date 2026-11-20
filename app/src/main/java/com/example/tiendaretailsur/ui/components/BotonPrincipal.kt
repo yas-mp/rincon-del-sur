@@ -11,9 +11,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -31,14 +33,15 @@ fun BotonPrincipal(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     habilitado : Boolean = true,
-    @DrawableRes icono: Int? = null
+    @DrawableRes icono: Int? = null,
+    colorBoton: Color = MaterialTheme.colorScheme.onSurface
 ){
     Button(
         onClick = onClick,
         modifier = modifier.estiloAltoBoton(),
         enabled = habilitado,
         shape = EstiloBoton.forma,
-        colors = EstiloBoton.coloresPrincipal(),
+        colors = ButtonDefaults.buttonColors(colorBoton),
         elevation = EstiloBoton.elevacion(),
         contentPadding = EstiloBoton.relleno
     ){

@@ -25,16 +25,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.lifecycle.viewmodel.initializer
-import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.tiendaretailsur.R
-import com.example.tiendaretailsur.data.UsuarioDbHelper
 import com.example.tiendaretailsur.model.PrimerIngresoUiState
 import com.example.tiendaretailsur.ui.components.BotonPrincipal
 import com.example.tiendaretailsur.ui.components.CampoContrasena
@@ -47,12 +43,7 @@ import com.example.tiendaretailsur.viewmodel.PrimerIngresoViewModel
 @Composable
 fun PrimerIngresoScreen(
     rutOCorreoUsuario: String,
-    dbHelper: UsuarioDbHelper = UsuarioDbHelper(LocalContext.current),
-    viewModel: PrimerIngresoViewModel = viewModel(
-        factory = viewModelFactory {
-            initializer { PrimerIngresoViewModel(dbHelper) }
-        }
-    ),
+    viewModel: PrimerIngresoViewModel = viewModel(),
     onConfiguracionCompletada: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
