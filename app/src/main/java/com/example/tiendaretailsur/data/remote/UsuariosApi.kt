@@ -37,6 +37,9 @@ interface UsuariosApi {
         @Body datos: PrimerIngresoRequest
     ): Response<UsuarioResponse>
 
+    @GET("api/usuarios/preguntas")
+    suspend fun listarPreguntasSeguridad(): Response<List<String>>
+
     @POST("api/usuarios/recuperar-pregunta")
     suspend fun obtenerPreguntaSeguridad(
         @Body datos: RecuperarPreguntaRequest

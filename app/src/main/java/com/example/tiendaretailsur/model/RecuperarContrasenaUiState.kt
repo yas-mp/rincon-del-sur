@@ -13,6 +13,7 @@ data class RecuperarContrasenaUiState(
     val nombreUsuarioEncontrado: String = "",
     val correoUsuarioEncontrado: String = "",
 
+    val listaPreguntas: List<String> = emptyList(),
     val pregunta1: String = "",
     val pregunta2: String = "",
     val respuesta1: String = "",
@@ -25,6 +26,7 @@ data class RecuperarContrasenaUiState(
     val nuevoHashGenerado: String = "",
 
     val errorUsuario: String? = null,
+    val errorPregunta1: String? = null,
     val errorRespuesta1: String? = null,
     val errorRespuesta2: String? = null,
     val errorNuevaContrasena: String? = null,

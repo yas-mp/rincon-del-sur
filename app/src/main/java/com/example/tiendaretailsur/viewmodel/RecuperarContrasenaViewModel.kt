@@ -22,6 +22,10 @@ class RecuperarContrasenaViewModel : ViewModel() {
         _uiState.update { it.copy(identificadorUsuario = valor, errorUsuario = null) }
     }
 
+    fun onPregunta1Cambia(valor: String) {
+        _uiState.update { it.copy(pregunta1 = valor, errorPregunta1 = null) }
+    }
+
     fun onRespuesta1Cambia(valor: String) {
         _uiState.update { it.copy(respuesta1 = valor, errorRespuesta1 = null) }
     }
@@ -51,12 +55,18 @@ class RecuperarContrasenaViewModel : ViewModel() {
 
         viewModelScope.launch {
             try {
-                val pregunta = usuarioRepository.obtenerPreguntaSeguridad(identificador)
+                // Valida que el colaborador exista y tenga pregunta configurada
+                usuarioRepository.obtenerPreguntaSeguridad(identificador)
+                // Carga el catálogo completo de preguntas desde el backend
+                val preguntasDisponibles = usuarioRepository.listarPreguntasSeguridad()
+
                 _uiState.update {
                     it.copy(
                         pasoActual = PasoRecuperacion.PREGUNTAS_SEGURIDAD,
                         correoUsuarioEncontrado = identificador,
-                        pregunta1 = pregunta,
+                        listaPreguntas = preguntasDisponibles,
+                        pregunta1 = "", // Se deja vacía para que el usuario elija la suya
+                        errorPregunta1 = null,
                         errorUsuario = null
                     )
                 }
@@ -73,7 +83,13 @@ class RecuperarContrasenaViewModel : ViewModel() {
     fun verificarRespuestas() {
         val estado = _uiState.value
         val identificador = estado.correoUsuarioEncontrado.trim()
+        val preguntaElegida = estado.pregunta1.trim()
         val respuestaIngresada = estado.respuesta1.trim()
+
+        if (preguntaElegida.isBlank()) {
+            _uiState.update { it.copy(errorPregunta1 = "Selecciona tu pregunta de seguridad") }
+            return
+        }
 
         if (respuestaIngresada.isBlank()) {
             _uiState.update { it.copy(errorRespuesta1 = "Ingresa tu respuesta de seguridad") }
@@ -82,17 +98,22 @@ class RecuperarContrasenaViewModel : ViewModel() {
 
         viewModelScope.launch {
             try {
-                val esCorrecta = usuarioRepository.verificarRespuesta(identificador, respuestaIngresada)
+                val esCorrecta = usuarioRepository.verificarRespuesta(
+                    rutOCorreo = identificador,
+                    pregunta = preguntaElegida,
+                    respuesta = respuestaIngresada
+                )
                 if (esCorrecta) {
                     _uiState.update {
                         it.copy(
                             pasoActual = PasoRecuperacion.CAMBIAR_CONTRASENA,
+                            errorPregunta1 = null,
                             errorRespuesta1 = null
                         )
                     }
                 } else {
                     _uiState.update {
-                        it.copy(errorRespuesta1 = "Respuesta de seguridad incorrecta")
+                        it.copy(errorRespuesta1 = "La pregunta o la respuesta de seguridad son incorrectas")
                     }
                 }
             } catch (e: Exception) {

@@ -99,22 +99,28 @@ class UsuarioRepository (
         return llamar { usuariosApi.completarPrimerIngreso(id, request) }.aUsuario()
     }
 
+    suspend fun listarPreguntasSeguridad(): List<String> =
+        llamar { usuariosApi.listarPreguntasSeguridad() }
+
     suspend fun obtenerPreguntaSeguridad(rutOCorreo: String): String {
-        val response = llamar { usuariosApi.obtenerPreguntaSeguridad(
-            RecuperarPreguntaRequest(
-                rutOCorreo
+        val response = llamar {
+            usuariosApi.obtenerPreguntaSeguridad(
+                RecuperarPreguntaRequest(rutOCorreo)
             )
-        ) }
+        }
         return response.pregunta
     }
 
-    suspend fun verificarRespuesta(rutOCorreo: String, respuesta: String): Boolean {
-        val response = llamar { usuariosApi.verificarRespuesta(
-            VerificarRespuestaRequest(
-                rutOCorreo,
-                respuesta
+    suspend fun verificarRespuesta(rutOCorreo: String, pregunta: String, respuesta: String): Boolean {
+        val response = llamar {
+            usuariosApi.verificarRespuesta(
+                VerificarRespuestaRequest(
+                    rutOCorreo = rutOCorreo,
+                    pregunta = pregunta,
+                    respuesta = respuesta
+                )
             )
-        ) }
+        }
         return response.valida
     }
 

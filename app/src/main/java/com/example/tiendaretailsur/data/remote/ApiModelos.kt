@@ -113,6 +113,7 @@ data class UsuarioResponse(
 )
 data class VerificarRespuestaRequest(
     val rutOCorreo: String,
+    val pregunta: String,
     val respuesta: String
 )
 data class PreguntaResponse(

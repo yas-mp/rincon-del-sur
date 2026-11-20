@@ -19,8 +19,13 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
@@ -31,7 +36,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
@@ -44,6 +51,7 @@ import com.example.tiendaretailsur.ui.components.CampoTexto
 import com.example.tiendaretailsur.ui.theme.Dimens
 import com.example.tiendaretailsur.viewmodel.RecuperarContrasenaViewModel
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RecuperarContrasenaScreen(
     viewModel: RecuperarContrasenaViewModel = viewModel(),
@@ -100,7 +108,7 @@ fun RecuperarContrasenaScreen(
             }
 
             Text(
-                text = "Valida tu identidad respondiendo tu pregunta de seguridad para restablecer tu contraseña.",
+                text = "Valida tu identidad seleccionando y respondiendo tu pregunta de seguridad para restablecer tu contraseña.",
                 style = tipografia.bodyMedium,
                 color = colores.onBackground.copy(alpha = 0.85f)
             )
@@ -150,6 +158,8 @@ fun RecuperarContrasenaScreen(
             }
 
             if (uiState.pasoActual == PasoRecuperacion.PREGUNTAS_SEGURIDAD) {
+                var expandido by remember { mutableStateOf(false) }
+
                 Card(
                     shape = formas.large,
                     colors = CardDefaults.cardColors(containerColor = colores.surfaceVariant),
@@ -165,12 +175,59 @@ fun RecuperarContrasenaScreen(
                             color = colores.onSurfaceVariant
                         )
 
-                        CampoTexto(
-                            valor = uiState.pregunta1,
-                            onValorCambia = {},
-                            etiqueta = "Pregunta de seguridad registrada",
-                            icono = R.drawable.ic_candado
-                        )
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            ExposedDropdownMenuBox(
+                                expanded = expandido,
+                                onExpandedChange = { expandido = !expandido },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                OutlinedTextField(
+                                    value = uiState.pregunta1,
+                                    onValueChange = {},
+                                    readOnly = true,
+                                    label = { Text("Selecciona tu pregunta de seguridad") },
+                                    isError = uiState.errorPregunta1 != null,
+                                    leadingIcon = {
+                                        Icon(
+                                            painter = painterResource(id = R.drawable.ic_candado),
+                                            contentDescription = null,
+                                            modifier = Modifier.size(Dimens.tamanoIcono)
+                                        )
+                                    },
+                                    trailingIcon = {
+                                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandido)
+                                    },
+                                    shape = formas.medium,
+                                    modifier = Modifier
+                                        .menuAnchor()
+                                        .fillMaxWidth()
+                                )
+
+                                ExposedDropdownMenu(
+                                    expanded = expandido,
+                                    onDismissRequest = { expandido = false }
+                                ) {
+                                    uiState.listaPreguntas.forEach { pregunta ->
+                                        DropdownMenuItem(
+                                            text = { Text(text = pregunta) },
+                                            onClick = {
+                                                viewModel.onPregunta1Cambia(pregunta)
+                                                expandido = false
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+
+                            if (uiState.errorPregunta1 != null) {
+                                Text(
+                                    text = uiState.errorPregunta1!!,
+                                    color = colores.error,
+                                    style = tipografia.bodySmall,
+                                    modifier = Modifier.padding(start = 16.dp, top = 4.dp)
+                                )
+                            }
+                        }
 
                         CampoTexto(
                             valor = uiState.respuesta1,
