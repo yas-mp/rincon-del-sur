@@ -10,11 +10,12 @@ data class Usuario(
     val telefono: String = "",
     val passwordHash: String = "",
     val activo: Boolean = true,
+    val debeCambiarContrasena: Boolean = false,
     val preguntaSeguridad1: String = "",
     val respuestaHash1: String = "",
     val preguntaSeguridad2: String = "",
     val respuestaHash2: String = "",
-    val avatar: ByteArray? = null
+    val avatarUrl: String? = null
 ) {
     val nombre: String
         get() = nombreCompleto
