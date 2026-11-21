@@ -28,6 +28,7 @@ class FormularioConteoViewModel(
     val uiState: StateFlow<FormularioConteoUiState> = _uiState.asStateFlow()
 
     private var _puertasHabilitadas = listOf<AccesoTienda>()
+    private val boletasEscaneadas = mutableSetOf<String>()
 
     init {
         cargarPuertasHabilitadas()
@@ -111,7 +112,6 @@ class FormularioConteoViewModel(
     }
 
     private fun esFormatoBoletaValido(codigo: String): Boolean {
-        // Opción 1: RDS-BOL-2026- seguido de 6 dígitos (ej: RDS-BOL-2026-000145)
         return codigo.matches(Regex("^RDS-BOL-2026-\\d{6}$"))
     }
 
@@ -120,17 +120,7 @@ class FormularioConteoViewModel(
 
         val codigoLimpio = codigoLeido.trim().uppercase()
 
-        if (esFormatoBoletaValido(codigoLimpio)) {
-            _uiState.update {
-                it.copy(
-                    cantidadClientes = it.cantidadClientes + 1,
-                    rangoEtario = "",
-                    compania = "",
-                    envioExitoso = false,
-                    mensajeFeedback = "Boleta válida ($codigoLimpio) -> +1 Cliente"
-                )
-            }
-        } else {
+        if (!esFormatoBoletaValido(codigoLimpio)) {
             _uiState.update {
                 it.copy(
                     cantidadTransito = it.cantidadTransito + 1,
@@ -140,6 +130,30 @@ class FormularioConteoViewModel(
                     mensajeFeedback = "Formato de boleta no válido -> +1 Tránsito"
                 )
             }
+            return
+        }
+
+        if (boletasEscaneadas.contains(codigoLimpio)) {
+            _uiState.update {
+                it.copy(
+                    rangoEtario = "",
+                    compania = "",
+                    envioExitoso = false,
+                    mensajeFeedback = "La boleta $codigoLimpio ya fue escaneada"
+                )
+            }
+            return
+        }
+
+        boletasEscaneadas.add(codigoLimpio)
+        _uiState.update {
+            it.copy(
+                cantidadClientes = it.cantidadClientes + 1,
+                rangoEtario = "",
+                compania = "",
+                envioExitoso = false,
+                mensajeFeedback = "Boleta válida ($codigoLimpio) -> +1 Cliente"
+            )
         }
     }
 
