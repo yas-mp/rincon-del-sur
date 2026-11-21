@@ -22,7 +22,7 @@ interface AccesosApi {
         @Path("id") id: Long
     ): Response<AccesosResponseDTO>
 
-    @POST("api/accesos/")
+    @POST("api/accesos")
     suspend fun crearAcceso(
         @Body requestDTO: AccesosRequestDTO
     ): Response<AccesosResponseDTO>

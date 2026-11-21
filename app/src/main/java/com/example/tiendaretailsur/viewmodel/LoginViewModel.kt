@@ -1,7 +1,9 @@
 package com.example.tiendaretailsur.viewmodel
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.tiendaretailsur.data.GestorSesion
 import com.example.tiendaretailsur.data.UsuarioRepository
 import com.example.tiendaretailsur.model.LoginUiState
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -10,9 +12,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-class LoginViewModel(
-    private val usuarioRepository: UsuarioRepository = UsuarioRepository()
-) : ViewModel() {
+class LoginViewModel(application: Application) : AndroidViewModel(application) {
+
+    private val usuarioRepository = UsuarioRepository()
+    private val gestorSesion = GestorSesion(application)
 
     private val _uiState = MutableStateFlow(LoginUiState())
     val uiState: StateFlow<LoginUiState> = _uiState.asStateFlow()
@@ -62,6 +65,18 @@ class LoginViewModel(
                     return@launch
                 }
 
+                // Guarda el ID y correo en GestorSesion para toda la app
+                val idNumerico = usuario.codigo.toLongOrNull() ?: -1L
+                val esAdmin = usuario.perfil.uppercase() in listOf(
+                    "P-01", "JEFA_TIENDA", "JEFA DE TIENDA", "P-02", "SUBGERENTE", "P-03", "SUPERVISOR"
+                )
+                gestorSesion.guardarSesion(
+                    idUsuario = idNumerico,
+                    correo = usuario.correo,
+                    nombre = usuario.nombreCompleto,
+                    perfil = usuario.perfil,
+                    isAdmin = esAdmin
+                )
                 _uiState.update {
                     it.copy(
                         loginExitoso = true,

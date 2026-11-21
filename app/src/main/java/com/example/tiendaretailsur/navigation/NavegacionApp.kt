@@ -7,12 +7,15 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.example.tiendaretailsur.data.GestorSesion
 import com.example.tiendaretailsur.model.SeccionAjustesAdmin
 import com.example.tiendaretailsur.ui.screens.AdminDashboardScreen
 import com.example.tiendaretailsur.ui.screens.AjustesAdminScreen
@@ -27,19 +30,41 @@ import com.example.tiendaretailsur.ui.theme.MiRegistroTheme
 
 @Composable
 fun NavegacionApp(initialDarkTheme: Boolean = isSystemInDarkTheme()) {
-    var isAdmin by rememberSaveable { mutableStateOf(true) }
+    val context = LocalContext.current
+    val gestorSesion = remember { GestorSesion(context) }
+
+    var isAdmin by rememberSaveable { mutableStateOf(gestorSesion.obtenerIsAdmin()) }
     var isDarkTheme by rememberSaveable { mutableStateOf(initialDarkTheme) }
-    var correoUsuarioLogueado by rememberSaveable { mutableStateOf("") }
-    var nombreUsuarioLogueado by rememberSaveable { mutableStateOf("") }
-    var perfilUsuarioLogueado by rememberSaveable { mutableStateOf("") }
+    var correoUsuarioLogueado by rememberSaveable { mutableStateOf(gestorSesion.obtenerCorreoUsuarioLogueado()) }
+    var nombreUsuarioLogueado by rememberSaveable { mutableStateOf(gestorSesion.obtenerNombreUsuarioLogueado()) }
+    var perfilUsuarioLogueado by rememberSaveable { mutableStateOf(gestorSesion.obtenerPerfilUsuarioLogueado()) }
 
     val navController = rememberNavController()
 
     fun destinoPorRol(perfil: String): String {
         return when (perfil.uppercase()) {
-            "P-01", "JEFA_TIENDA", "P-03", "SUPERVISOR" -> Ruta.AdminPanel.ruta
+            "P-01", "JEFA DE TIENDA", "JEFA_TIENDA", "P-03", "SUPERVISOR" -> Ruta.AdminPanel.ruta
             "P-02", "SUBGERENTE" -> Ruta.AjustesAdmin.ruta
             else -> Ruta.MenuPrincipal.ruta
+        }
+    }
+
+    val rutaInicial = remember {
+        if (gestorSesion.haySesionActiva()) {
+            destinoPorRol(gestorSesion.obtenerPerfilUsuarioLogueado())
+        } else {
+            Ruta.Login.ruta
+        }
+    }
+
+    fun cerrarSesionYNavegar() {
+        gestorSesion.cerrarSesion()
+        correoUsuarioLogueado = ""
+        nombreUsuarioLogueado = ""
+        perfilUsuarioLogueado = ""
+        isAdmin = false
+        navController.navigate(Ruta.Login.ruta) {
+            popUpTo(0) { inclusive = true }
         }
     }
 
@@ -49,7 +74,7 @@ fun NavegacionApp(initialDarkTheme: Boolean = isSystemInDarkTheme()) {
         ) { innerPadding ->
             NavHost(
                 navController = navController,
-                startDestination = Ruta.Login.ruta,
+                startDestination = rutaInicial,
                 modifier = Modifier.padding(innerPadding)
             ) {
                 composable(Ruta.Login.ruta) {
@@ -59,7 +84,7 @@ fun NavegacionApp(initialDarkTheme: Boolean = isSystemInDarkTheme()) {
                             nombreUsuarioLogueado = usuarioAutenticado.nombreCompleto
                             perfilUsuarioLogueado = usuarioAutenticado.perfil
                             isAdmin = usuarioAutenticado.perfil.uppercase() in listOf(
-                                "P-01", "JEFA_TIENDA", "P-02", "SUBGERENTE", "P-03", "SUPERVISOR"
+                                "P-01", "JEFA_TIENDA", "JEFA DE TIENDA", "P-02", "SUBGERENTE", "P-03", "SUPERVISOR"
                             )
                             val destino = if (usuarioAutenticado.debeCambiarContrasena) {
                                 Ruta.PrimerIngreso.ruta
@@ -118,11 +143,7 @@ fun NavegacionApp(initialDarkTheme: Boolean = isSystemInDarkTheme()) {
                         onIrPerfil = {
                             navController.navigate(Ruta.Perfil.ruta)
                         },
-                        onCerrarSesion = {
-                            navController.navigate(Ruta.Login.ruta) {
-                                popUpTo(0) { inclusive = true }
-                            }
-                        }
+                        onCerrarSesion = { cerrarSesionYNavegar() }
                     )
                 }
 
@@ -155,29 +176,17 @@ fun NavegacionApp(initialDarkTheme: Boolean = isSystemInDarkTheme()) {
                         onAjustes = {
                             navController.navigate(Ruta.Perfil.ruta)
                         },
-                        onCerrarSesionClick = {
-                            navController.navigate(Ruta.Login.ruta) {
-                                popUpTo(0) { inclusive = true }
-                            }
-                        }
+                        onCerrarSesionClick = { cerrarSesionYNavegar() }
                     )
                 }
 
                 composable(Ruta.AjustesAdmin.ruta) {
                     AjustesAdminScreen(
                         seccionInicial = SeccionAjustesAdmin.COLABORADORES,
-                        onVolverClick = {
-                            navController.navigate(Ruta.Login.ruta) {
-                                popUpTo(0) { inclusive = true }
-                            }
-                        },
+                        onVolverClick = { cerrarSesionYNavegar() },
                         onIrAMiPerfilClick = { navController.navigate(Ruta.Perfil.ruta) },
                         onIrARegistroColaborador = { navController.navigate(Ruta.FormularioRegistro.ruta) },
-                        onCerrarSesionClick = {
-                            navController.navigate(Ruta.Login.ruta) {
-                                popUpTo(0) { inclusive = true }
-                            }
-                        }
+                        onCerrarSesionClick = { cerrarSesionYNavegar() }
                     )
                 }
             }

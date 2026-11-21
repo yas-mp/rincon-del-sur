@@ -38,6 +38,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -49,6 +50,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.tiendaretailsur.ui.components.UserHeader
@@ -70,6 +74,19 @@ fun MenuPrincipalScreen(
 ) {
     LaunchedEffect(isAdmin) {
         viewModel.cargarDatosDesdeDb(isAdmin)
+    }
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.cargarDatosDesdeApi()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
     }
 
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
@@ -166,7 +183,7 @@ fun MenuPrincipalScreen(
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = { Text(if (isAdmin) "Menú Principal" else "Menú Principal") },
+                    title = { Text("Menú Principal") },
                     navigationIcon = {
                         IconButton(onClick = { scope.launch { drawerState.open() } }) {
                             Icon(imageVector = Icons.Default.Menu, contentDescription = "Menú lateral")
@@ -284,7 +301,10 @@ fun MenuPrincipalScreen(
 
                         Card(
                             modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface, contentColor = MaterialTheme.colorScheme.onSurface)
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surface,
+                                contentColor = MaterialTheme.colorScheme.onSurface
+                            )
                         ) {
                             Row(
                                 modifier = Modifier
@@ -301,7 +321,7 @@ fun MenuPrincipalScreen(
                                     )
                                     Spacer(modifier = Modifier.height(2.dp))
                                     Text(
-                                        text = acceso.descripcion,
+                                        text = if (acceso.estaHabilitado) acceso.descripcion else "${acceso.descripcion} (Cerrada)",
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                                     )
@@ -362,17 +382,33 @@ fun MenuPrincipalScreen(
 
                         items(uiState.listaAccesos) { acceso ->
                             val esSeleccionado = accesoSeleccionado == acceso.id
+                            val estaHabilitada = acceso.estaHabilitado
 
                             Card(
-                                onClick = { accesoSeleccionado = acceso.id },
+                                onClick = {
+                                    if (estaHabilitada) {
+                                        accesoSeleccionado = acceso.id
+                                    }
+                                },
+                                enabled = estaHabilitada,
                                 modifier = Modifier.fillMaxWidth(),
                                 elevation = CardDefaults.cardElevation(
-                                    defaultElevation = 4.dp,
+                                    defaultElevation = if (estaHabilitada) 4.dp else 0.dp,
                                     pressedElevation = 1.dp
                                 ),
                                 colors = CardDefaults.cardColors(
-                                    containerColor = if (esSeleccionado) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
-                                    contentColor = if (esSeleccionado) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+                                    containerColor = when {
+                                        !estaHabilitada -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                                        esSeleccionado -> MaterialTheme.colorScheme.primaryContainer
+                                        else -> MaterialTheme.colorScheme.surface
+                                    },
+                                    contentColor = when {
+                                        !estaHabilitada -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f)
+                                        esSeleccionado -> MaterialTheme.colorScheme.onPrimaryContainer
+                                        else -> MaterialTheme.colorScheme.onSurface
+                                    },
+                                    disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                                    disabledContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f)
                                 )
                             ) {
                                 Row(
@@ -390,12 +426,22 @@ fun MenuPrincipalScreen(
                                         )
                                         Spacer(modifier = Modifier.height(2.dp))
                                         Text(
-                                            text = acceso.descripcion,
+                                            text = if (estaHabilitada) acceso.descripcion else "Acceso cerrado por mantención",
                                             style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                                            color = MaterialTheme.colorScheme.onSurface.copy(
+                                                alpha = if (estaHabilitada) 0.7f else 0.45f
+                                            )
                                         )
                                     }
-                                    if (esSeleccionado) {
+                                    if (!estaHabilitada) {
+                                        Badge(containerColor = MaterialTheme.colorScheme.errorContainer) {
+                                            Text(
+                                                text = "Cerrada",
+                                                color = MaterialTheme.colorScheme.onErrorContainer,
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                            )
+                                        }
+                                    } else if (esSeleccionado) {
                                         Badge(containerColor = MaterialTheme.colorScheme.primary) {
                                             Text("Seleccionado", color = MaterialTheme.colorScheme.onPrimary)
                                         }

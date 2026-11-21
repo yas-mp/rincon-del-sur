@@ -29,12 +29,17 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
@@ -56,6 +61,8 @@ import com.example.tiendaretailsur.ui.theme.Exito
 import com.example.tiendaretailsur.ui.theme.GrisDeshabilitada
 import com.example.tiendaretailsur.ui.theme.MiRegistroTheme
 import com.example.tiendaretailsur.viewmodel.LoginViewModel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @Composable
 fun LoginScreen(
@@ -65,24 +72,41 @@ fun LoginScreen(
     onCrearCuentaClick: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(uiState.loginExitoso, uiState.usuarioAutenticado) {
         if (uiState.loginExitoso && uiState.usuarioAutenticado != null) {
+            val job = launch {
+                snackbarHostState.showSnackbar(
+                    message = "Has iniciado sesión correctamente",
+                    duration = SnackbarDuration.Indefinite
+                )
+            }
+            kotlinx.coroutines.delay(1000) // Duración exacta: 1.3 segundos (ajusta a gusto)
+            snackbarHostState.currentSnackbarData?.dismiss()
+            job.cancel()
             onLoginSuccess(uiState.usuarioAutenticado!!)
         }
     }
 
-    LoginContent(
-        uiState = uiState,
-        onCorreoChanged = viewModel::onCorreoChanged,
-        onContrasenaChanged = viewModel::onContrasenaChanged,
-        onTogglePasswordVisibility = viewModel::togglePasswordVisibility,
-        onLoginClick = {
-            viewModel.login()
-        },
-        onOlvideContrasenaClick = onOlvideContrasenaClick,
-        onCrearCuentaClick = onCrearCuentaClick
-    )
+    Scaffold(
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
+        containerColor = MaterialTheme.colorScheme.background
+    ) { innerPadding ->
+        Box(modifier = Modifier.padding(innerPadding)) {
+            LoginContent(
+                uiState = uiState,
+                onCorreoChanged = viewModel::onCorreoChanged,
+                onContrasenaChanged = viewModel::onContrasenaChanged,
+                onTogglePasswordVisibility = viewModel::togglePasswordVisibility,
+                onLoginClick = {
+                    viewModel.login()
+                },
+                onOlvideContrasenaClick = onOlvideContrasenaClick,
+                onCrearCuentaClick = onCrearCuentaClick
+            )
+        }
+    }
 }
 
 @Composable
@@ -396,11 +420,6 @@ fun LoginContent(
                 }
             }
 
-            if (uiState.loginExitoso && uiState.usuarioAutenticado != null) {
-                Spacer(modifier = Modifier.height(Dimens.espacioMedio))
-                MensajeLoginExitoso(usuario = uiState.usuarioAutenticado!!)
-            }
-
             Spacer(modifier = Modifier.weight(1f))
             Spacer(modifier = Modifier.height(Dimens.espacioGrande))
 
@@ -425,46 +444,6 @@ fun LoginContent(
                         color = colores.onBackground.copy(alpha = 0.75f)
                     )
                 }
-            }
-        }
-    }
-}
-
-@Composable
-private fun MensajeLoginExitoso(usuario: Usuario) {
-    val colores = MaterialTheme.colorScheme
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.medium,
-        colors = CardDefaults.cardColors(
-            containerColor = colores.surfaceVariant,
-            contentColor = colores.surfaceVariant
-        )
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(Dimens.espacioMedio),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                painter = painterResource(id = R.drawable.ic_check),
-                contentDescription = null,
-                tint = colores.primary,
-                modifier = Modifier.size(Dimens.tamanoIcono)
-            )
-            Spacer(modifier = Modifier.width(Dimens.espacioMedio))
-            Column {
-                Text(
-                    text = "Acceso autorizado: ${usuario.nombreCompleto}",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = colores.onSurfaceVariant
-                )
-                Text(
-                    text = "• Perfil ${usuario.perfil} (RUT: ${usuario.rut})",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = colores.onSurfaceVariant.copy(alpha = 0.8f)
-                )
             }
         }
     }

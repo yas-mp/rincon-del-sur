@@ -159,6 +159,35 @@ class RecuperarContrasenaViewModel : ViewModel() {
             }
         }
     }
+    fun enviarClaveAlCorreo() {
+        val identificador = _uiState.value.identificadorUsuario.trim()
+        if (identificador.isBlank()) {
+            _uiState.update { it.copy(errorUsuario = "Ingresa tu correo electrónico o RUT para enviarte la clave") }
+            return
+        }
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(cargandoCorreo = true, errorUsuario = null) }
+            try {
+                usuarioRepository.recuperarPorCorreo(identificador)
+                _uiState.update {
+                    it.copy(
+                        cargandoCorreo = false,
+                        pasoActual = PasoRecuperacion.CORREO_ENVIADO,
+                        correoUsuarioEncontrado = identificador,
+                        errorUsuario = null
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(
+                        cargandoCorreo = false,
+                        errorUsuario = e.message ?: "No se pudo enviar la clave temporal al correo"
+                    )
+                }
+            }
+        }
+    }
 
     private fun validarFormatoContrasena(contrasena: String): String? {
         if (contrasena.length < 8) return "La contraseña debe tener al menos 8 caracteres"

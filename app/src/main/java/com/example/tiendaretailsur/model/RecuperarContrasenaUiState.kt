@@ -4,6 +4,7 @@ enum class PasoRecuperacion {
     BUSCAR_USUARIO,
     PREGUNTAS_SEGURIDAD,
     CAMBIAR_CONTRASENA,
+    CORREO_ENVIADO,
     COMPLETADO
 }
 
@@ -12,6 +13,7 @@ data class RecuperarContrasenaUiState(
     val identificadorUsuario: String = "",
     val nombreUsuarioEncontrado: String = "",
     val correoUsuarioEncontrado: String = "",
+    val cargandoCorreo: Boolean = false,
 
     val listaPreguntas: List<String> = emptyList(),
     val pregunta1: String = "",

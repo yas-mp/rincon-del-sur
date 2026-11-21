@@ -1,6 +1,5 @@
 package com.example.tiendaretailsur.ui.screens
 
-import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -14,7 +13,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -23,7 +21,6 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -32,11 +29,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
@@ -261,9 +255,7 @@ fun FormularioRegistroContent(
                 )
             }
             Spacer(modifier = Modifier.height(10.dp))
-            val clipboardManager = LocalClipboardManager.current
-            val context = LocalContext.current
-
+        }
             if (uiState.registroExitoso) {
                 AlertDialog(
                     containerColor = MaterialTheme.colorScheme.surface,
@@ -285,27 +277,15 @@ fun FormularioRegistroContent(
                                 text = "El ${uiState.rolSeleccionado} ${uiState.nombre} ha sido registrado correctamente.",
                                 color = MaterialTheme.colorScheme.onSurface
                             )
-                            SelectionContainer {
-                                Text(
-                                    text = "Contraseña temporal: ${uiState.contrasenaTemporalGenerada}",
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                            }
                             Text(
-                                text = "Compártela con el colaborador para que active su cuenta en su primer inicio de sesión.",
+                                text = "Se ha enviado una clave temporal de acceso al correo ${uiState.correo.trim()}.",
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Text(
+                                text = "El colaborador deberá ingresar con esa contraseña y cambiarla en su primer inicio de sesión.",
                                 color = MaterialTheme.colorScheme.onSurface
                             )
-                        }
-                    },
-                    dismissButton = {
-                        OutlinedButton(
-                            onClick = {
-                                clipboardManager.setText(AnnotatedString(uiState.contrasenaTemporalGenerada))
-                                Toast.makeText(context, "Contraseña temporal copiada", Toast.LENGTH_SHORT).show()
-                            }
-                        ) {
-                            Text("Copiar clave")
                         }
                     },
                     confirmButton = {
@@ -322,7 +302,6 @@ fun FormularioRegistroContent(
             }
 
             Spacer(Modifier.height(Dimens.espacioPantalla))
-        }
     }
 }
 

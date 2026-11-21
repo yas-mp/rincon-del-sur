@@ -28,7 +28,6 @@ import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Store
 import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.material3.AlertDialog
@@ -76,7 +75,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.tiendaretailsur.model.AjustesAdminUiState
 import com.example.tiendaretailsur.model.ConfiguracionAcceso
-import com.example.tiendaretailsur.model.ConfiguracionPerfil
 import com.example.tiendaretailsur.model.SeccionAjustesAdmin
 import com.example.tiendaretailsur.model.SolicitudCorreo
 import com.example.tiendaretailsur.model.Usuario
@@ -189,12 +187,12 @@ fun AjustesAdminScreen(
                     title = {
                         Column {
                             Text(
-                                text = "Ajustes de Administrador",
+                                text = "Gestión de usuarios y accesos",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                text = "Gestión de perfiles, colaboradores y tienda",
+                                text = "Gestión de perfiles, usuarios y tienda",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.75f)
                             )
@@ -223,7 +221,6 @@ fun AjustesAdminScreen(
                     SeccionAjustesAdmin.entries.forEach { seccion ->
                         val icono = when (seccion) {
                             SeccionAjustesAdmin.COLABORADORES -> Icons.Default.People
-                            SeccionAjustesAdmin.PERFILES -> Icons.Default.Settings
                             SeccionAjustesAdmin.TIENDA -> Icons.Default.Store
                         }
                         Tab(
@@ -246,14 +243,6 @@ fun AjustesAdminScreen(
                             onResolverSolicitud = viewModel::resolverSolicitudCorreo
                         )
                     }
-                    SeccionAjustesAdmin.PERFILES -> {
-                        SeccionPerfilesContent(
-                            perfiles = uiState.perfiles,
-                            usuarios = uiState.usuarios,
-                            onAlternarPerfil = viewModel::alternarEstadoPerfil,
-                            onEditarPerfilClick = viewModel::abrirEditorPerfil
-                        )
-                    }
                     SeccionAjustesAdmin.TIENDA -> {
                         SeccionTiendaYCuentaContent(
                             metaConversionTexto = uiState.metaConversionTexto,
@@ -261,6 +250,8 @@ fun AjustesAdminScreen(
                             onGuardarMeta = viewModel::guardarMetaConversion,
                             accesos = uiState.accesos,
                             onAlternarAcceso = viewModel::alternarEstadoAcceso,
+                            onAgregarAccesoClick = viewModel::abrirNuevoAcceso,
+                            onEditarAccesoClick = viewModel::abrirEditorAcceso,
                             onIrAMiPerfilClick = onIrAMiPerfilClick
                         )
                     }
@@ -292,16 +283,27 @@ fun AjustesAdminScreen(
                     onGuardar = viewModel::guardarCambiosPerfil
                 )
             }
+            if (uiState.mostrandoDialogoAcceso) {
+                DialogoFormularioAcceso(
+                    uiState = uiState,
+                    onDismiss = viewModel::cerrarDialogoAcceso,
+                    onCodigoCambia = viewModel::onEditAccesoCodigoCambia,
+                    onNombreCambia = viewModel::onEditAccesoNombreCambia,
+                    onDescripcionCambia = viewModel::onEditAccesoDescripcionCambia,
+                    onHabilitadoCambia = viewModel::onEditAccesoHabilitadoCambia,
+                    onGuardar = viewModel::guardarAcceso
+                )
+            }
         }
     }
 }
 
-private fun formatearNombrePerfil(codigo: String): String = when (codigo) {
+private fun formatearNombrePerfil(codigo: String): String = when (codigo.trim().uppercase()) {
     "TODOS" -> "Todos los perfiles"
-    "JEFA_TIENDA" -> "Jefa de Tienda"
-    "SUBGERENTE" -> "Subgerente"
-    "SUPERVISOR" -> "Supervisor"
-    "OBSERVADOR" -> "Observador"
+    "P-01", "JEFA_TIENDA", "JEFA DE TIENDA" -> "Jefa de Tienda"
+    "P-02", "SUBGERENTE", "ADMINISTRADOR" -> "Subgerente"
+    "P-03", "SUPERVISOR", "SUPERVISORA" -> "Supervisor"
+    "P-04", "OBSERVADOR" -> "Observador"
     else -> codigo
 }
 
@@ -320,7 +322,8 @@ private fun SeccionColaboradoresContent(
                 u.nombreCompleto.contains(uiState.busqueda, ignoreCase = true) ||
                 u.correo.contains(uiState.busqueda, ignoreCase = true) ||
                 u.rut.contains(uiState.busqueda, ignoreCase = true)
-        val coincidePerfil = uiState.filtroPerfil == "TODOS" || u.perfil == uiState.filtroPerfil
+        val coincidePerfil = uiState.filtroPerfil == "TODOS" ||
+                formatearNombrePerfil(u.perfil).equals(formatearNombrePerfil(uiState.filtroPerfil), ignoreCase = true)
         coincideTexto && coincidePerfil
     }
 
@@ -370,12 +373,12 @@ private fun SeccionColaboradoresContent(
                 .horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            val opciones = listOf("TODOS", "JEFA_TIENDA", "SUBGERENTE", "SUPERVISOR", "OBSERVADOR")
+            val opciones = listOf("TODOS", "P-01", "P-02", "P-03", "P-04")
             opciones.forEach { codigo ->
                 FilterChip(
                     selected = uiState.filtroPerfil == codigo,
                     onClick = { onFiltroPerfilCambia(codigo) },
-                    label = { Text(if (codigo == "TODOS") "Todos los perfiles" else codigo) },
+                    label = { Text(formatearNombrePerfil(codigo)) },
                     colors = FilterChipDefaults.filterChipColors(
                         selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.18f),
                         selectedLabelColor = MaterialTheme.colorScheme.primary
@@ -617,112 +620,14 @@ private fun TarjetaColaboradorItem(
 }
 
 @Composable
-private fun SeccionPerfilesContent(
-    perfiles: List<ConfiguracionPerfil>,
-    usuarios: List<Usuario>,
-    onAlternarPerfil: (ConfiguracionPerfil, Boolean) -> Unit,
-    onEditarPerfilClick: (ConfiguracionPerfil) -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        Text(
-            text = "Perfiles de Usuario de la Aplicación",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold
-        )
-        Text(
-            text = "Habilita o deshabilita perfiles completos y edita su configuración.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f)
-        )
-
-        perfiles.forEach { perfil ->
-            val cantidadUsuarios = usuarios.count { it.perfil == perfil.nombre || it.perfil == perfil.codigo }
-            val cantidadActivos = usuarios.count { (it.perfil == perfil.nombre || it.perfil == perfil.codigo) && it.activo }
-
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "${perfil.codigo} - ${perfil.nombre}",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "$cantidadActivos de $cantidadUsuarios colaboradores activos en este perfil",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f)
-                            )
-                        }
-                        Switch(
-                            checked = perfil.habilitado,
-                            onCheckedChange = { onAlternarPerfil(perfil, it) }
-                        )
-                    }
-
-                    Text(
-                        text = perfil.descripcion,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-
-                    HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
-
-                    Text(
-                        text = "Permisos asignados:",
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    perfil.permisosActivos.forEach { permiso ->
-                        Text(
-                            text = "• $permiso",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f)
-                        )
-                    }
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.End
-                    ) {
-                        TextButton(onClick = { onEditarPerfilClick(perfil) }) {
-                            Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Configurar perfil")
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
 private fun SeccionTiendaYCuentaContent(
     metaConversionTexto: String,
     onMetaCambia: (String) -> Unit,
     onGuardarMeta: () -> Unit,
     accesos: List<ConfiguracionAcceso>,
     onAlternarAcceso: (String, Boolean) -> Unit,
+    onAgregarAccesoClick: () -> Unit,
+    onEditarAccesoClick: (ConfiguracionAcceso) -> Unit,
     onIrAMiPerfilClick: () -> Unit
 ) {
     val context = LocalContext.current
@@ -822,17 +727,37 @@ private fun SeccionTiendaYCuentaContent(
                 modifier = Modifier.padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text(
-                    text = "Estado de Accesos de la Tienda",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = "Habilita o marca como cerrado un acceso por mantención o evento.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Estado de Accesos de la Tienda",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "Agrega, modifica o marca como cerrado un acceso por mantención o evento.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+                        )
+                    }
+                    Button(
+                        onClick = onAgregarAccesoClick,
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Agregar")
+                    }
+                }
 
                 accesos.forEach { acceso ->
                     HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
@@ -854,17 +779,25 @@ private fun SeccionTiendaYCuentaContent(
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f)
                             )
                         }
-                        Switch(
-                            checked = acceso.habilitado,
-                            onCheckedChange = { onAlternarAcceso(acceso.codigo, it) }
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            IconButton(onClick = { onEditarAccesoClick(acceso) }) {
+                                Icon(
+                                    imageVector = Icons.Default.Edit,
+                                    contentDescription = "Modificar acceso",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                            Switch(
+                                checked = acceso.habilitado,
+                                onCheckedChange = { onAlternarAcceso(acceso.codigo, it) }
+                            )
+                        }
                     }
                 }
             }
         }
     }
 }
-
 @Composable
 private fun DialogoEditarUsuario(
     uiState: AjustesAdminUiState,
@@ -879,16 +812,27 @@ private fun DialogoEditarUsuario(
     onNuevaContrasenaCambia: (String) -> Unit,
     onGuardar: () -> Unit
 ) {
+    val rolesDisponibles = listOf(
+        "P-01" to "Jefa de Tienda",
+        "P-02" to "Subgerente",
+        "P-03" to "Supervisor",
+        "P-04" to "Observador"
+    )
+
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Modificar Colaborador") },
+        title = { Text("Modificar Colaborador", fontWeight = FontWeight.Bold) },
         text = {
             Column(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 uiState.errorEdicionUsuario?.let { err ->
-                    Text(text = err, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                    Text(
+                        text = err,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
                 }
 
                 OutlinedTextField(
@@ -924,6 +868,41 @@ private fun DialogoEditarUsuario(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                     modifier = Modifier.fillMaxWidth()
                 )
+
+                Text(
+                    text = "Rol / Perfil de Acceso",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    rolesDisponibles.chunked(2).forEach { filaRoles ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            filaRoles.forEach { (codigo, nombreRol) ->
+                                val seleccionado = formatearNombrePerfil(uiState.editPerfil)
+                                    .equals(nombreRol, ignoreCase = true)
+
+                                FilterChip(
+                                    selected = seleccionado,
+                                    onClick = {
+                                        onPerfilCambia(codigo)
+                                        onCargoCambia(nombreRol)
+                                    },
+                                    label = { Text(nombreRol) },
+                                    modifier = Modifier.weight(1f),
+                                    colors = FilterChipDefaults.filterChipColors(
+                                        selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.18f),
+                                        selectedLabelColor = MaterialTheme.colorScheme.primary
+                                    )
+                                )
+                            }
+                        }
+                    }
+                }
 
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -1002,6 +981,86 @@ private fun DialogoEditarPerfil(
         confirmButton = {
             Button(onClick = onGuardar) {
                 Text("Guardar")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancelar")
+            }
+        }
+    )
+
+}
+@Composable
+private fun DialogoFormularioAcceso(
+    uiState: AjustesAdminUiState,
+    onDismiss: () -> Unit,
+    onCodigoCambia: (String) -> Unit,
+    onNombreCambia: (String) -> Unit,
+    onDescripcionCambia: (String) -> Unit,
+    onHabilitadoCambia: (Boolean) -> Unit,
+    onGuardar: () -> Unit
+) {
+    val esEdicion = uiState.accesoEnEdicion != null
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = if (esEdicion) "Modificar Punto de Acceso" else "Agregar Punto de Acceso",
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                OutlinedTextField(
+                    value = uiState.editAccesoCodigo,
+                    onValueChange = onCodigoCambia,
+                    label = { Text("Código (ej: A5)") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = uiState.editAccesoNombre,
+                    onValueChange = onNombreCambia,
+                    label = { Text("Nombre de la puerta") },
+                    placeholder = { Text("Ej: Acceso Norte / Estacionamiento") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = uiState.editAccesoDescripcion,
+                    onValueChange = onDescripcionCambia,
+                    label = { Text("Descripción / Ubicación") },
+                    placeholder = { Text("Ej: Entrada sector bodega") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = if (uiState.editAccesoHabilitado) "Acceso operativo" else "Acceso bloqueado",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Switch(
+                        checked = uiState.editAccesoHabilitado,
+                        onCheckedChange = onHabilitadoCambia
+                    )
+                }
+                if (uiState.errorEdicionAcceso != null) {
+                    Text(
+                        text = uiState.errorEdicionAcceso,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(onClick = onGuardar) {
+                Text(if (esEdicion) "Guardar cambios" else "Crear acceso")
             }
         },
         dismissButton = {

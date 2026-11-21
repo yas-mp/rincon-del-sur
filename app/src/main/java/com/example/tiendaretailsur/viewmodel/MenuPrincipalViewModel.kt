@@ -4,19 +4,17 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.tiendaretailsur.data.AccesoRepository
+import com.example.tiendaretailsur.data.AvatarRepository
 import com.example.tiendaretailsur.data.ConteoRepository
 import com.example.tiendaretailsur.data.GestorSesion
 import com.example.tiendaretailsur.data.UsuarioRepository
 import com.example.tiendaretailsur.model.AccesoTienda
 import com.example.tiendaretailsur.model.MenuPrincipalUiState
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import java.net.URL
 import java.util.Locale
 
 class MenuPrincipalViewModel : AndroidViewModel {
@@ -25,13 +23,12 @@ class MenuPrincipalViewModel : AndroidViewModel {
     private val accesoRepository = AccesoRepository()
     private val conteoRepository = ConteoRepository()
     private val usuarioRepository = UsuarioRepository()
+    private val avatarRepository = AvatarRepository()
 
-    // Constructor vacío útil para @Preview en Compose
     constructor() : super(Application()) {
         gestorSesion = null
     }
 
-    // Constructor real usado por viewModel() en Android
     constructor(application: Application) : super(application) {
         gestorSesion = GestorSesion(application)
     }
@@ -43,13 +40,11 @@ class MenuPrincipalViewModel : AndroidViewModel {
         cargarDatosDesdeApi()
     }
 
-    // Mantiene compatibilidad si tu pantalla aún llama a cargarDatosDesdeDb(isAdmin)
     fun cargarDatosDesdeDb(isAdmin: Boolean = true) {
         cargarDatosDesdeApi()
     }
 
     fun cargarDatosDesdeApi() {
-        // Si se instanció sin Context (ej. @Preview), carga datos de muestra
         if (gestorSesion == null) {
             _uiState.update {
                 it.copy(
@@ -71,7 +66,6 @@ class MenuPrincipalViewModel : AndroidViewModel {
         }
 
         viewModelScope.launch {
-            // 1. Obtener puertas reales desde microservicio Accesos (8083)
             val puertasApi = accesoRepository.listar()
             val listaAccesosFinal = puertasApi.ifEmpty {
                 listOf(
@@ -82,11 +76,18 @@ class MenuPrincipalViewModel : AndroidViewModel {
                 )
             }
 
-            // 2. Obtener usuario logueado desde GestorSesion y descargar su avatar desde microservicio Usuarios (8082)
             val idUsuario = gestorSesion.obtenerIdUsuarioLogueado()
+            val correoSesion = gestorSesion.obtenerCorreoUsuarioLogueado()
+
             val usuarioActual = if (idUsuario != -1L) {
                 try {
                     usuarioRepository.obtener(idUsuario)
+                } catch (_: Exception) {
+                    null
+                }
+            } else if (correoSesion.isNotBlank()) {
+                try {
+                    usuarioRepository.listar(correoSesion).firstOrNull()
                 } catch (_: Exception) {
                     null
                 }
@@ -94,24 +95,13 @@ class MenuPrincipalViewModel : AndroidViewModel {
                 null
             }
 
-            val avatarReal: ByteArray? = usuarioActual?.avatarUrl?.let { url ->
-                if (url.isNotBlank()) {
-                    val urlCompleta = if (url.startsWith("http")) {
-                        url
-                    } else {
-                        "http://10.0.2.2:8082/${url.trimStart('/')}"
-                    }
-                    withContext(Dispatchers.IO) {
-                        try {
-                            URL(urlCompleta).readBytes()
-                        } catch (_: Exception) {
-                            null
-                        }
-                    }
-                } else null
+            val idNumerico = usuarioActual?.codigo?.toLongOrNull() ?: idUsuario
+            val avatarReal: ByteArray? = if (idNumerico != -1L) {
+                avatarRepository.obtenerBytes(idNumerico)
+            } else {
+                null
             }
 
-            // 3. Obtener conteos reales desde microservicio Conteos (8084)
             val conteos = conteoRepository.listarConteos()
 
             val totalTransito = conteos.sumOf { it.cantidadTransito }

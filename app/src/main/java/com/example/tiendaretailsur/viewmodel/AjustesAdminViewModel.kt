@@ -30,6 +30,16 @@ class AjustesAdminViewModel(
         recargarDatos()
     }
 
+    private fun obtenerRolIdDesdePerfil(perfil: String): Long {
+        return when (perfil.trim().replace("_", " ").lowercase()) {
+            "p-01", "jefa de tienda", "jefe de tienda", "1" -> 1L
+            "p-02", "subgerente", "admin", "administrador", "2" -> 2L
+            "p-03", "supervisor", "supervisora", "3" -> 3L
+            "p-04", "observador", "4" -> 4L
+            else -> 4L
+        }
+    }
+
     fun recargarDatos() {
         viewModelScope.launch {
             val usuariosList = try {
@@ -40,6 +50,12 @@ class AjustesAdminViewModel(
 
             val accesosList = try {
                 accesoRepository.listar()
+            } catch (e: Exception) {
+                emptyList()
+            }
+
+            val solicitudesList = try {
+                usuarioRepository.listarSolicitudesPendientes()
             } catch (e: Exception) {
                 emptyList()
             }
@@ -59,6 +75,7 @@ class AjustesAdminViewModel(
                 it.copy(
                     usuarios = usuariosList,
                     accesos = accesosConfig,
+                    solicitudesCorreo = solicitudesList,
                     metaConversionTexto = "15.0"
                 )
             }
@@ -67,10 +84,23 @@ class AjustesAdminViewModel(
 
     fun resolverSolicitudCorreo(solicitud: SolicitudCorreo, aprobar: Boolean) {
         viewModelScope.launch {
+            val exito = try {
+                usuarioRepository.resolverSolicitudCorreo(solicitud.id.toLong(), aprobar)
+                true
+            } catch (e: Exception) {
+                e.printStackTrace()
+                false
+            }
             recargarDatos()
             val accion = if (aprobar) "aprobada y correo actualizado" else "rechazada"
             _uiState.update {
-                it.copy(mensajeConfirmacion = "Solicitud de ${solicitud.nombreUsuario} $accion")
+                it.copy(
+                    mensajeConfirmacion = if (exito) {
+                        "Solicitud de ${solicitud.nombreUsuario} $accion"
+                    } else {
+                        "Error al procesar la solicitud de ${solicitud.nombreUsuario}"
+                    }
+                )
             }
         }
     }
@@ -102,7 +132,7 @@ class AjustesAdminViewModel(
                     telefono = usuario.telefono,
                     cargo = usuario.cargo,
                     turno = "",
-                    rolId = 1L,
+                    rolId = obtenerRolIdDesdePerfil(usuario.perfil),
                     activo = nuevoEstado,
                     pregunta = usuario.preguntaSeguridad1,
                     respuesta = usuario.respuestaHash1
@@ -201,7 +231,7 @@ class AjustesAdminViewModel(
                     telefono = estado.editTelefono,
                     cargo = estado.editCargo,
                     turno = "",
-                    rolId = 1L,
+                    rolId = obtenerRolIdDesdePerfil(estado.editPerfil),
                     activo = estado.editActivo,
                     pregunta = usuarioOriginal.preguntaSeguridad1,
                     respuesta = usuarioOriginal.respuestaHash1
@@ -322,6 +352,113 @@ class AjustesAdminViewModel(
                 it.copy(
                     mensajeConfirmacion = "Acceso $codigoAcceso marcado como $estadoTexto"
                 )
+            }
+        }
+    }
+    fun abrirNuevoAcceso() {
+        val siguienteNumero = (_uiState.value.accesos.size + 1)
+        _uiState.update {
+            it.copy(
+                mostrandoDialogoAcceso = true,
+                accesoEnEdicion = null,
+                editAccesoCodigo = "A$siguienteNumero",
+                editAccesoNombre = "",
+                editAccesoDescripcion = "",
+                editAccesoHabilitado = true,
+                errorEdicionAcceso = null
+            )
+        }
+    }
+
+    fun abrirEditorAcceso(acceso: ConfiguracionAcceso) {
+        _uiState.update {
+            it.copy(
+                mostrandoDialogoAcceso = true,
+                accesoEnEdicion = acceso,
+                editAccesoCodigo = "A${acceso.codigo}",
+                editAccesoNombre = acceso.nombre,
+                editAccesoDescripcion = acceso.descripcion,
+                editAccesoHabilitado = acceso.habilitado,
+                errorEdicionAcceso = null
+            )
+        }
+    }
+
+    fun cerrarDialogoAcceso() {
+        _uiState.update {
+            it.copy(
+                mostrandoDialogoAcceso = false,
+                accesoEnEdicion = null,
+                errorEdicionAcceso = null
+            )
+        }
+    }
+
+    fun onEditAccesoCodigoCambia(valor: String) {
+        _uiState.update { it.copy(editAccesoCodigo = valor.uppercase(), errorEdicionAcceso = null) }
+    }
+
+    fun onEditAccesoNombreCambia(valor: String) {
+        _uiState.update { it.copy(editAccesoNombre = valor, errorEdicionAcceso = null) }
+    }
+
+    fun onEditAccesoDescripcionCambia(valor: String) {
+        _uiState.update { it.copy(editAccesoDescripcion = valor, errorEdicionAcceso = null) }
+    }
+
+    fun onEditAccesoHabilitadoCambia(valor: Boolean) {
+        _uiState.update { it.copy(editAccesoHabilitado = valor) }
+    }
+
+    fun guardarAcceso() {
+        val estado = _uiState.value
+        if (estado.editAccesoCodigo.isBlank()) {
+            _uiState.update { it.copy(errorEdicionAcceso = "El código es obligatorio (ej: A5)") }
+            return
+        }
+        if (estado.editAccesoNombre.isBlank()) {
+            _uiState.update { it.copy(errorEdicionAcceso = "El nombre del acceso es obligatorio") }
+            return
+        }
+
+        viewModelScope.launch {
+            val esEdicion = estado.accesoEnEdicion != null
+            val exito = if (esEdicion) {
+                val idNumerico = estado.accesoEnEdicion!!.codigo.toLongOrNull() ?: 1L
+                accesoRepository.actualizar(
+                    idAcceso = idNumerico,
+                    codigo = estado.editAccesoCodigo.trim(),
+                    nombre = estado.editAccesoNombre.trim(),
+                    descripcion = estado.editAccesoDescripcion.trim().ifBlank { "Acceso general" },
+                    habilitado = estado.editAccesoHabilitado
+                )
+            } else {
+                accesoRepository.crear(
+                    codigo = estado.editAccesoCodigo.trim(),
+                    nombre = estado.editAccesoNombre.trim(),
+                    descripcion = estado.editAccesoDescripcion.trim().ifBlank { "Acceso general" },
+                    habilitado = estado.editAccesoHabilitado
+                )
+            }
+
+            if (exito) {
+                recargarDatos()
+                _uiState.update {
+                    it.copy(
+                        mostrandoDialogoAcceso = false,
+                        accesoEnEdicion = null,
+                        errorEdicionAcceso = null,
+                        mensajeConfirmacion = if (esEdicion) {
+                            "Acceso '${estado.editAccesoNombre}' actualizado correctamente"
+                        } else {
+                            "Nuevo acceso '${estado.editAccesoNombre}' creado correctamente"
+                        }
+                    )
+                }
+            } else {
+                _uiState.update {
+                    it.copy(errorEdicionAcceso = "No se pudo guardar. Verifica que el código no esté repetido.")
+                }
             }
         }
     }

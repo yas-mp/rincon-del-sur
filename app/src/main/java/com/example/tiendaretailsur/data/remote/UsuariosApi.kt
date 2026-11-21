@@ -71,4 +71,28 @@ interface UsuariosApi {
     suspend fun eliminar(
         @Path("id") id: Long
     ): Response<Unit>
+
+    @POST("api/solicitudes-correo")
+    suspend fun crearSolicitudCorreo(
+        @Body request: SolicitudCorreoRequest
+    ): Response<SolicitudCorreoResponse>
+
+    @GET("api/solicitudes-correo/pendientes")
+    suspend fun listarSolicitudesPendientes(): Response<List<SolicitudCorreoResponse>>
+
+    @GET("api/solicitudes-correo/pendientes/{rut}")
+    suspend fun obtenerPendientePorRut(
+        @Path("rut") rut: String
+    ): Response<SolicitudCorreoResponse>
+
+    @PUT("api/solicitudes-correo/{id}/resolver")
+    suspend fun resolverSolicitudCorreo(
+        @Path("id") id: Long,
+        @Query("aprobar") aprobar: Boolean
+    ): Response<Unit>
+
+    @POST("api/usuarios/recuperar-correo")
+    suspend fun recuperarPorCorreo(
+        @Body datos: RecuperarPreguntaRequest
+    ): Response<Unit>
 }

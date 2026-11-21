@@ -9,9 +9,11 @@ import com.example.tiendaretailsur.data.remote.RegistroRequest
 import com.example.tiendaretailsur.data.remote.RestablecerContrasenaRequest
 import com.example.tiendaretailsur.data.remote.RetrofitClient
 import com.example.tiendaretailsur.data.remote.RolApi
+import com.example.tiendaretailsur.data.remote.SolicitudCorreoRequest
 import com.example.tiendaretailsur.data.remote.UsuariosApi
 import com.example.tiendaretailsur.data.remote.VerificarRespuestaRequest
 import com.example.tiendaretailsur.model.RolUsuario
+import com.example.tiendaretailsur.model.SolicitudCorreo
 import com.example.tiendaretailsur.model.Usuario
 import org.json.JSONObject
 import retrofit2.HttpException
@@ -167,6 +169,57 @@ class UsuarioRepository (
         } catch (e: IOException) {
             android.util.Log.e("RETROFIT_ERROR", "Fallo de red: ${e.javaClass.simpleName} - ${e.message}", e)
             throw Exception("Error de red (${e.javaClass.simpleName}): ${e.message}")
+        }
+    }
+    suspend fun crearSolicitudCorreo(
+        rutUsuario: String,
+        nombreUsuario: String,
+        correoActual: String,
+        correoNuevo: String,
+        motivo: String
+    ): SolicitudCorreo {
+        val request = SolicitudCorreoRequest(
+            rutUsuario = rutUsuario,
+            nombreUsuario = nombreUsuario,
+            correoActual = correoActual,
+            correoNuevo = correoNuevo,
+            motivo = motivo
+        )
+        return llamar { usuariosApi.crearSolicitudCorreo(request) }.toModel()
+    }
+
+    suspend fun listarSolicitudesPendientes(): List<SolicitudCorreo> =
+        llamar { usuariosApi.listarSolicitudesPendientes() }.map { it.toModel() }
+
+    suspend fun obtenerSolicitudPendientePorRut(rut: String): SolicitudCorreo? {
+        return try {
+            val response = usuariosApi.obtenerPendientePorRut(rut)
+            if (response.isSuccessful) response.body()?.toModel() else null
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    suspend fun resolverSolicitudCorreo(id: Long, aprobar: Boolean) {
+        val response = usuariosApi.resolverSolicitudCorreo(id, aprobar)
+        if (!response.isSuccessful) {
+            throw Exception("Error al resolver solicitud (${response.code()})")
+        }
+    }
+    suspend fun recuperarPorCorreo(rutOCorreo: String) {
+        try {
+            val response = usuariosApi.recuperarPorCorreo(RecuperarPreguntaRequest(rutOCorreo))
+            if (!response.isSuccessful) {
+                val errorBody = response.errorBody()?.string()
+                val mensaje = try {
+                    JSONObject(errorBody ?: "").optString("mensaje")
+                } catch (ex: Exception) {
+                    ""
+                }
+                throw Exception(mensaje.ifBlank { "Error del servidor (${response.code()})" })
+            }
+        } catch (e: IOException) {
+            throw Exception("Error de red: ${e.message}")
         }
     }
 }

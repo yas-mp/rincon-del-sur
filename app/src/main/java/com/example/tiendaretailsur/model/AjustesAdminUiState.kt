@@ -2,7 +2,6 @@ package com.example.tiendaretailsur.model
 
 enum class SeccionAjustesAdmin(val titulo: String) {
     COLABORADORES("Colaboradores"),
-    PERFILES("Perfiles App"),
     TIENDA("Tienda y Cuenta")
 }
 
@@ -33,6 +32,14 @@ data class AjustesAdminUiState(
     val editPerfilDescripcion: String = "",
     val editPerfilHabilitado: Boolean = true,
     val aplicarEstadoATodosLosUsuariosDelPerfil: Boolean = false,
+
+    val mostrandoDialogoAcceso: Boolean = false,
+    val accesoEnEdicion: ConfiguracionAcceso? = null,
+    val editAccesoCodigo: String = "",
+    val editAccesoNombre: String = "",
+    val editAccesoDescripcion: String = "",
+    val editAccesoHabilitado: Boolean = true,
+    val errorEdicionAcceso: String? = null,
 
     val mensajeConfirmacion: String? = null
 )

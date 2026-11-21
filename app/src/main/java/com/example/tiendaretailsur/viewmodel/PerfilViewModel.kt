@@ -22,7 +22,7 @@ class PerfilViewModel(application: Application) : AndroidViewModel(application) 
     private val gestorSesion = GestorSesion(application)
     private val usuarioRepository = UsuarioRepository()
     private val avatarRepository = AvatarRepository()
-
+    private var idUsuarioActual: Long = -1L
     private var correoUsuario: String = ""
     private var rutUsuario: String = ""
 
@@ -57,12 +57,13 @@ class PerfilViewModel(application: Application) : AndroidViewModel(application) 
 
             correoUsuario = usuario?.correo ?: correoSesion
             rutUsuario = usuario?.rut ?: ""
+            idUsuarioActual = usuario?.codigo?.toLongOrNull() ?: idUsuario
 
             val perfilTienda = if (usuario != null) {
                 Perfil(
                     nombre = usuario.nombreCompleto,
                     correo = usuario.correo,
-                    turno = if (usuario.perfil in listOf("P-01", "P-02", "JEFA_TIENDA", "SUBGERENTE")) "N/A" else "Turno Diurno",
+                    turno = if (usuario.perfil in listOf("P-01", "P-02", "JEFA DE TIENDA", "SUBGERENTE")) "N/A" else "Turno Diurno",
                     cargo = usuario.perfil
                 )
             } else {
@@ -74,21 +75,16 @@ class PerfilViewModel(application: Application) : AndroidViewModel(application) 
                 )
             }
 
-            val avatarReal: ByteArray? = usuario?.avatarUrl?.let { url ->
-                if (url.isNotBlank()) {
-                    val urlCompleta = if (url.startsWith("http")) {
-                        url
-                    } else {
-                        "http://10.0.2.2:8082/${url.trimStart('/')}"
-                    }
-                    withContext(Dispatchers.IO) {
-                        try {
-                            URL(urlCompleta).readBytes()
-                        } catch (_: Exception) {
-                            null
-                        }
-                    }
-                } else null
+            val avatarReal: ByteArray? = if (idUsuarioActual != -1L) {
+                avatarRepository.obtenerBytes(idUsuarioActual)
+            } else {
+                null
+            }
+
+            val solicitudPendiente = if (rutUsuario.isNotBlank()) {
+                usuarioRepository.obtenerSolicitudPendientePorRut(rutUsuario)
+            } else {
+                null
             }
 
             _uiState.update {
@@ -127,6 +123,7 @@ class PerfilViewModel(application: Application) : AndroidViewModel(application) 
     fun enviarSolicitudCambioCorreo() {
         val estado = _uiState.value
         val nuevoCorreo = estado.nuevoCorreoSolicitado.trim()
+        val motivo = estado.motivoCorreoSolicitado.trim()
 
         if (nuevoCorreo.isBlank() || !nuevoCorreo.contains("@") || !nuevoCorreo.contains(".")) {
             _uiState.update { it.copy(errorNuevoCorreo = "Ingresa un correo electrónico válido") }
@@ -136,24 +133,44 @@ class PerfilViewModel(application: Application) : AndroidViewModel(application) 
             _uiState.update { it.copy(errorNuevoCorreo = "El nuevo correo debe ser distinto al actual") }
             return
         }
+        if (rutUsuario.isBlank()) {
+            _uiState.update { it.copy(errorNuevoCorreo = "No se pudo identificar el RUT del usuario") }
+            return
+        }
 
-        // Pendiente de endpoint en UsuariosApi; confirma recepción en UI sin romper flujo
-        _uiState.update {
-            it.copy(
-                dialogoCorreoAbierto = false,
-                tieneSolicitudCorreoPendiente = true,
-                mensajeSnackbar = "Solicitud enviada al Subgerente para aprobación"
-            )
+        viewModelScope.launch {
+            try {
+                usuarioRepository.crearSolicitudCorreo(
+                    rutUsuario = rutUsuario,
+                    nombreUsuario = estado.perfil.nombre,
+                    correoActual = estado.perfil.correo,
+                    correoNuevo = nuevoCorreo,
+                    motivo = motivo.ifBlank { "Solicitud de actualización de correo desde perfil" }
+                )
+                _uiState.update {
+                    it.copy(
+                        dialogoCorreoAbierto = false,
+                        tieneSolicitudCorreoPendiente = true,
+                        mensajeSnackbar = "Solicitud enviada al Subgerente para aprobación"
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(
+                        errorNuevoCorreo = e.message ?: "Error al enviar la solicitud"
+                    )
+                }
+            }
         }
     }
 
     fun setAvatarBytes(bytes: ByteArray?) {
         _uiState.update { it.copy(avatarBytes = bytes) }
-        val idUsuario = gestorSesion.obtenerIdUsuarioLogueado()
-        if (bytes != null && idUsuario != -1L) {
+        val idDestino = if (idUsuarioActual != -1L) idUsuarioActual else gestorSesion.obtenerIdUsuarioLogueado()
+        if (bytes != null && idDestino != -1L) {
             viewModelScope.launch {
                 try {
-                    avatarRepository.subir(idUsuario, bytes)
+                    avatarRepository.subir(idDestino, bytes)
                     _uiState.update { it.copy(mensajeSnackbar = "Foto de perfil actualizada") }
                 } catch (e: Exception) {
                     _uiState.update {

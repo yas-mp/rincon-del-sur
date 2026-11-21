@@ -1,5 +1,6 @@
 package com.example.tiendaretailsur.ui.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,12 +20,15 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
@@ -108,7 +112,7 @@ fun RecuperarContrasenaScreen(
             }
 
             Text(
-                text = "Valida tu identidad seleccionando y respondiendo tu pregunta de seguridad para restablecer tu contraseña.",
+                text = "Valida tu identidad con tu pregunta de seguridad o solicita una clave temporal a tu correo registrado.",
                 style = tipografia.bodyMedium,
                 color = colores.onBackground.copy(alpha = 0.85f)
             )
@@ -139,6 +143,7 @@ fun RecuperarContrasenaScreen(
 
                         Button(
                             onClick = { viewModel.buscarUsuario() },
+                            enabled = !uiState.cargandoCorreo,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(Dimens.alturaBoton),
@@ -149,9 +154,52 @@ fun RecuperarContrasenaScreen(
                             )
                         ) {
                             Text(
-                                text = "Buscar usuario",
+                                text = "Continuar con pregunta de seguridad",
                                 style = tipografia.labelLarge
                             )
+                        }
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            HorizontalDivider(modifier = Modifier.weight(1f))
+                            Text(
+                                text = "  o  ",
+                                style = tipografia.bodySmall,
+                                color = colores.onSurfaceVariant.copy(alpha = 0.7f)
+                            )
+                            HorizontalDivider(modifier = Modifier.weight(1f))
+                        }
+
+                        OutlinedButton(
+                            onClick = { viewModel.enviarClaveAlCorreo() },
+                            enabled = !uiState.cargandoCorreo,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(Dimens.alturaBoton),
+                            shape = RoundedCornerShape(Dimens.radioBoton),
+                            border = BorderStroke(1.dp, colores.primary)
+                        ) {
+                            if (uiState.cargandoCorreo) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    strokeWidth = 2.dp,
+                                    color = colores.primary
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "Enviando clave...",
+                                    style = tipografia.labelLarge,
+                                    color = colores.primary
+                                )
+                            } else {
+                                Text(
+                                    text = "Enviar clave temporal a mi correo",
+                                    style = tipografia.labelLarge,
+                                    color = colores.primary
+                                )
+                            }
                         }
                     }
                 }
@@ -228,7 +276,6 @@ fun RecuperarContrasenaScreen(
                                 )
                             }
                         }
-
                         CampoTexto(
                             valor = uiState.respuesta1,
                             onValorCambia = viewModel::onRespuesta1Cambia,
@@ -238,6 +285,7 @@ fun RecuperarContrasenaScreen(
 
                         Button(
                             onClick = { viewModel.verificarRespuestas() },
+                            enabled = !uiState.cargandoCorreo,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(Dimens.alturaBoton),
@@ -250,6 +298,19 @@ fun RecuperarContrasenaScreen(
                             Text(
                                 text = "Verificar respuesta",
                                 style = tipografia.labelLarge
+                            )
+                        }
+
+                        TextButton(
+                            onClick = { viewModel.enviarClaveAlCorreo() },
+                            enabled = !uiState.cargandoCorreo,
+                            modifier = Modifier.align(Alignment.CenterHorizontally)
+                        ) {
+                            Text(
+                                text = if (uiState.cargandoCorreo) "Enviando correo..."
+                                else "¿Olvidaste tu respuesta? Enviar clave temporal al correo",
+                                style = tipografia.bodySmall,
+                                color = colores.primary
                             )
                         }
                     }
@@ -303,6 +364,50 @@ fun RecuperarContrasenaScreen(
                         ) {
                             Text(
                                 text = "Actualizar contraseña",
+                                style = tipografia.labelLarge
+                            )
+                        }
+                    }
+                }
+            }
+            if (uiState.pasoActual == PasoRecuperacion.CORREO_ENVIADO) {
+                Card(
+                    shape = formas.large,
+                    colors = CardDefaults.cardColors(containerColor = colores.surfaceVariant),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(Dimens.espacioMedio),
+                        verticalArrangement = Arrangement.spacedBy(Dimens.espacioMedio)
+                    ) {
+                        Text(
+                            text = "¡Clave temporal enviada!",
+                            style = tipografia.titleMedium,
+                            color = colores.primary
+                        )
+                        Text(
+                            text = "Hemos enviado una clave temporal al correo registrado de la cuenta (${uiState.correoUsuarioEncontrado}).",
+                            style = tipografia.bodyMedium,
+                            color = colores.onSurfaceVariant
+                        )
+                        Text(
+                            text = "Revisa tu bandeja de entrada (o carpeta de spam), inicia sesión con esa clave y el sistema te pedirá crear una contraseña nueva.",
+                            style = tipografia.bodySmall,
+                            color = colores.onSurfaceVariant.copy(alpha = 0.85f)
+                        )
+                        Button(
+                            onClick = onVolverALoginClick,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(Dimens.alturaBoton),
+                            shape = RoundedCornerShape(Dimens.radioBoton),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = colores.primary,
+                                contentColor = colores.onPrimary
+                            )
+                        ) {
+                            Text(
+                                text = "Ir a iniciar sesión",
                                 style = tipografia.labelLarge
                             )
                         }

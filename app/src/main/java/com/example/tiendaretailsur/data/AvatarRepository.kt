@@ -29,6 +29,18 @@ class AvatarRepository (
             throw Exception("No se pudo conectar con el servidor")
         }
     }
+    suspend fun obtenerBytes(idUsuario: Long): ByteArray? {
+        return try {
+            val response = avatarApi.obtener(idUsuario)
+            if (response.isSuccessful) {
+                response.body()?.bytes()
+            } else {
+                null
+            }
+        } catch (_: Exception) {
+            null
+        }
+    }
 }
 
 private fun UsuarioResponse.aUsuario(): Usuario = Usuario(
@@ -42,3 +54,4 @@ private fun UsuarioResponse.aUsuario(): Usuario = Usuario(
     activo = activo,
     debeCambiarContrasena = primerIngreso
 )
+

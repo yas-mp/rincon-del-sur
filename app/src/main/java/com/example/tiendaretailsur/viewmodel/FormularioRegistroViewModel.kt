@@ -19,19 +19,6 @@ class FormularioRegistroViewModel : ViewModel() {
     private val _uiState = MutableStateFlow(FormularioRegistroUiState())
     val uiState: StateFlow<FormularioRegistroUiState> = _uiState.asStateFlow()
 
-    private fun generarContrasena(): String {
-        val mayusculas = "ABCDEFGHJKLMNPQRSTUVWXYZ"
-        val minusculas = "abcdefghijkmnopqrstuvwxyz"
-        val numeros = "23456789"
-        return buildString {
-            append(mayusculas.random())
-            append(minusculas.random())
-            repeat(4) { append(numeros.random()) }
-            append(mayusculas.random())
-            append(minusculas.random())
-        }
-    }
-
     fun onRutCambia(nuevoRut: String) {
         val rutLimpio = nuevoRut.replace("[^0-9kK]".toRegex(), "").uppercase().take(9)
         _uiState.update {
@@ -112,7 +99,6 @@ class FormularioRegistroViewModel : ViewModel() {
             return
         }
 
-        val claveGenerada = generarContrasena()
         val rutFormateado = autoCompletadoRut(estado.rut)
 
         viewModelScope.launch {
@@ -122,7 +108,7 @@ class FormularioRegistroViewModel : ViewModel() {
                     nombre = estado.nombre.trim(),
                     correo = estado.correo.trim(),
                     telefono = estado.telefono,
-                    contrasena = claveGenerada,
+                    contrasena = "",
                     cargo = estado.rolSeleccionado.name,
                     turno = "Turno Diurno",
                     rolId = estado.rolSeleccionado.id
@@ -135,7 +121,7 @@ class FormularioRegistroViewModel : ViewModel() {
                         errorFormatoCorreo = null,
                         errorTelefono = null,
                         errorTerminos = null,
-                        contrasenaTemporalGenerada = claveGenerada,
+                        contrasenaTemporalGenerada = "",
                         registroExitoso = true
                     )
                 }

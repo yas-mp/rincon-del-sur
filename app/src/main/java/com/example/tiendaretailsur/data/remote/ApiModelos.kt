@@ -1,4 +1,7 @@
 package com.example.tiendaretailsur.data.remote
+
+import com.example.tiendaretailsur.model.SolicitudCorreo
+
 //roles
 data class RolRequestDTO(
     val nombre: String,
@@ -127,5 +130,26 @@ data class SolicitudCorreoRequest(
     val rutUsuario: String,
     val nombreUsuario: String,
     val correoActual: String,
-
+    val correoNuevo: String,
+    val motivo: String
 )
+
+data class SolicitudCorreoResponse(
+    val id: Long,
+    val rutUsuario: String,
+    val nombreUsuario: String?,
+    val correoActual: String?,
+    val correoNuevo: String,
+    val motivo: String?,
+    val estado: String
+) {
+    fun toModel(): SolicitudCorreo = SolicitudCorreo(
+        id = id.toInt(),
+        rutUsuario = rutUsuario,
+        nombreUsuario = nombreUsuario.orEmpty(),
+        correoActual = correoActual.orEmpty(),
+        correoNuevo = correoNuevo,
+        motivo = motivo.orEmpty(),
+        estado = estado
+    )
+}
