@@ -40,10 +40,15 @@ class FormularioConteoViewModel(
                 _puertasHabilitadas = accesos.filter { it.estaHabilitado }
 
                 _uiState.update { estado ->
-                    val puertaValida = if (_puertasHabilitadas.any { it.nombre.equals(estado.puertaAcceso, ignoreCase = true) || it.id.equals(estado.puertaAcceso, ignoreCase = true) }) {
+                    val puertaValida = if (_puertasHabilitadas.any {
+                            it.nombre.equals(estado.puertaAcceso, ignoreCase = true) ||
+                                    it.id.equals(estado.puertaAcceso, ignoreCase = true)
+                        }) {
                         estado.puertaAcceso
                     } else {
-                        _puertasHabilitadas.firstOrNull()?.id ?: _puertasHabilitadas.firstOrNull()?.nombre ?: ""
+                        _puertasHabilitadas.firstOrNull()?.id
+                            ?: _puertasHabilitadas.firstOrNull()?.nombre
+                            ?: ""
                     }
                     estado.copy(puertaAcceso = puertaValida)
                 }
@@ -53,52 +58,103 @@ class FormularioConteoViewModel(
         }
     }
 
-    fun obtenerPuertasHabilitadas(): List<AccesoTienda> {
-        return _puertasHabilitadas
-    }
+    fun obtenerPuertasHabilitadas(): List<AccesoTienda> = _puertasHabilitadas
 
     fun estaPuertaActualBloqueada(): Boolean {
         val puertaActual = _uiState.value.puertaAcceso
         if (puertaActual.isBlank()) return false
 
         val puertaEncontrada = _puertasHabilitadas.find {
-            it.id.equals(puertaActual, ignoreCase = true) || it.nombre.equals(puertaActual, ignoreCase = true)
+            it.id.equals(puertaActual, ignoreCase = true) ||
+                    it.nombre.equals(puertaActual, ignoreCase = true)
         }
         return puertaEncontrada != null && !puertaEncontrada.estaHabilitado
     }
 
     fun setPuerta(puerta: String) {
-        _uiState.update { it.copy(puertaAcceso = puerta, envioExitoso = false) }
-    }
-
-    fun incrementarTransito() {
-        if (estaPuertaActualBloqueada()) return
-        _uiState.update { it.copy(cantidadTransito = it.cantidadTransito + 1, envioExitoso = false) }
-    }
-
-    fun decrementarTransito() {
-        if (estaPuertaActualBloqueada()) return
-        _uiState.update { it.copy(cantidadTransito = maxOf(0, it.cantidadTransito - 1), envioExitoso = false) }
-    }
-
-    fun incrementarClientes() {
-        if (estaPuertaActualBloqueada()) return
-        _uiState.update { it.copy(cantidadClientes = it.cantidadClientes + 1, envioExitoso = false) }
-    }
-
-    fun decrementarClientes() {
-        if (estaPuertaActualBloqueada()) return
-        _uiState.update { it.copy(cantidadClientes = maxOf(0, it.cantidadClientes - 1), envioExitoso = false) }
+        _uiState.update {
+            it.copy(
+                puertaAcceso = puerta,
+                envioExitoso = false,
+                mensajeFeedback = null
+            )
+        }
     }
 
     fun seleccionarRangoEtario(rango: String) {
         if (estaPuertaActualBloqueada()) return
-        _uiState.update { it.copy(rangoEtario = rango, envioExitoso = false) }
+        _uiState.update {
+            it.copy(
+                rangoEtario = rango,
+                envioExitoso = false,
+                mensajeFeedback = null
+            )
+        }
     }
 
     fun seleccionarCompania(comp: String) {
         if (estaPuertaActualBloqueada()) return
-        _uiState.update { it.copy(compania = comp, envioExitoso = false) }
+        _uiState.update {
+            it.copy(
+                compania = comp,
+                envioExitoso = false,
+                mensajeFeedback = null
+            )
+        }
+    }
+
+    fun puedeRegistrarSalida(): Boolean {
+        val estado = _uiState.value
+        return !estaPuertaActualBloqueada() &&
+                estado.rangoEtario.isNotBlank() &&
+                estado.compania.isNotBlank()
+    }
+
+    private fun esFormatoBoletaValido(codigo: String): Boolean {
+        // Opción 1: RDS-BOL-2026- seguido de 6 dígitos (ej: RDS-BOL-2026-000145)
+        return codigo.matches(Regex("^RDS-BOL-2026-\\d{6}$"))
+    }
+
+    fun procesarEscaneoBoleta(codigoLeido: String) {
+        if (!puedeRegistrarSalida()) return
+
+        val codigoLimpio = codigoLeido.trim().uppercase()
+
+        if (esFormatoBoletaValido(codigoLimpio)) {
+            _uiState.update {
+                it.copy(
+                    cantidadClientes = it.cantidadClientes + 1,
+                    rangoEtario = "",
+                    compania = "",
+                    envioExitoso = false,
+                    mensajeFeedback = "Boleta válida ($codigoLimpio) -> +1 Cliente"
+                )
+            }
+        } else {
+            _uiState.update {
+                it.copy(
+                    cantidadTransito = it.cantidadTransito + 1,
+                    rangoEtario = "",
+                    compania = "",
+                    envioExitoso = false,
+                    mensajeFeedback = "Formato de boleta no válido -> +1 Tránsito"
+                )
+            }
+        }
+    }
+
+    fun registrarSinBoleta() {
+        if (!puedeRegistrarSalida()) return
+
+        _uiState.update {
+            it.copy(
+                cantidadTransito = it.cantidadTransito + 1,
+                rangoEtario = "",
+                compania = "",
+                envioExitoso = false,
+                mensajeFeedback = "Salida sin boleta (+1 Tránsito)"
+            )
+        }
     }
 
     fun enviarFormulario() {
@@ -115,7 +171,6 @@ class FormularioConteoViewModel(
                 val idUsuario = gestorSesion.obtenerIdUsuarioLogueado()
                 val correo = gestorSesion.obtenerCorreoUsuarioLogueado()
 
-                // Obtener nombre del observador real desde el repositorio usando la sesión
                 var nombreObservador = correo.ifBlank { "Usuario Sistema" }
                 if (idUsuario != -1L) {
                     try {
@@ -124,7 +179,7 @@ class FormularioConteoViewModel(
                             nombreObservador = usuario.nombreCompleto
                         }
                     } catch (_: Exception) {
-                        // Fallback
+
                     }
                 }
 
@@ -135,15 +190,28 @@ class FormularioConteoViewModel(
                     usuarioId = if (idUsuario != -1L) idUsuario else null
                 )
                 if (exito) {
-                    _uiState.update { FormularioConteoUiState(puertaAcceso = it.puertaAcceso, envioExitoso = true) }
+                    _uiState.update {
+                        FormularioConteoUiState(
+                            puertaAcceso = it.puertaAcceso,
+                            envioExitoso = true,
+                            mensajeFeedback = "Registro de aforo enviado correctamente"
+                        )
+                    }
                 }
             } catch (_: Exception) {
-
+                _uiState.update {
+                    it.copy(mensajeFeedback = "Error al enviar el registro")
+                }
             }
         }
     }
 
     fun limpiarExitoso() {
-        _uiState.update { it.copy(envioExitoso = false) }
+        _uiState.update {
+            it.copy(
+                envioExitoso = false,
+                mensajeFeedback = null
+            )
+        }
     }
 }

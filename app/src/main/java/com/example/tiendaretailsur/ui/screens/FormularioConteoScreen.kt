@@ -1,7 +1,21 @@
 package com.example.tiendaretailsur.ui.screens
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.util.Size
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.OptIn
+import androidx.camera.core.CameraSelector
+import androidx.camera.core.ExperimentalGetImage
+import androidx.camera.core.ImageAnalysis
+import androidx.camera.core.ImageProxy
+import androidx.camera.core.Preview
+import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.camera.view.PreviewView
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -28,20 +42,30 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.window.Dialog
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.tiendaretailsur.viewmodel.FormularioConteoViewModel
+import com.google.mlkit.vision.barcode.BarcodeScanning
+import com.google.mlkit.vision.common.InputImage
+import java.util.concurrent.Executors
 
 @Composable
 fun FormularioConteoScreen(
@@ -57,20 +81,36 @@ fun FormularioConteoScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val estaPuertaBloqueada = viewModel.estaPuertaActualBloqueada()
     val snackbarHostState = remember { SnackbarHostState() }
-    var cantidadGrupo by remember { mutableIntStateOf(1) }
+    val context = LocalContext.current
+
+    var mostrarEscaner by remember { mutableStateOf(false) }
+    var tienePermisoCamara by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.CAMERA
+            ) == PackageManager.PERMISSION_GRANTED
+        )
+    }
+
+    val launcherPermisoCamara = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { concedido ->
+        tienePermisoCamara = concedido
+        if (concedido && viewModel.puedeRegistrarSalida()) {
+            mostrarEscaner = true
+        } else if (!concedido) {
+            mostrarEscaner = false
+        }
+    }
 
     val coloresChip = FilterChipDefaults.filterChipColors(
         selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.16f),
         selectedLabelColor = MaterialTheme.colorScheme.primary
     )
 
-    LaunchedEffect(uiState.compania) {
-        cantidadGrupo = when (uiState.compania) {
-            "Pareja" -> 2
-            "Con niños", "Grupo" -> 3
-            else -> 1
-        }
-    }
+    val seleccionCompleta = uiState.rangoEtario.isNotBlank() && uiState.compania.isNotBlank()
+    val puedeOperarSalida = !estaPuertaBloqueada && seleccionCompleta
 
     LaunchedEffect(uiState.mensajeFeedback) {
         val mensaje = uiState.mensajeFeedback
@@ -99,7 +139,7 @@ fun FormularioConteoScreen(
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
@@ -121,7 +161,11 @@ fun FormularioConteoScreen(
                             text = "Puerta Activa: ${uiState.puertaAcceso}",
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.SemiBold,
-                            color = if (estaPuertaBloqueada) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                            color = if (estaPuertaBloqueada) {
+                                MaterialTheme.colorScheme.error
+                            } else {
+                                MaterialTheme.colorScheme.primary
+                            },
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                         )
                     }
@@ -157,155 +201,7 @@ fun FormularioConteoScreen(
                     )
                 }
             }
-            Card(
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "Tránsito (Solo Atajo)",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = "Personas que cruzaron por la tienda sin comprar.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                            )
-                        }
-                        Text(
-                            text = "${uiState.cantidadTransito}",
-                            style = MaterialTheme.typography.headlineLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        OutlinedButton(
-                            onClick = { viewModel.decrementarTransito() },
-                            enabled = !estaPuertaBloqueada && uiState.puedeRestarTransito,
-                            border = BorderStroke(
-                                1.dp,
-                                if (!estaPuertaBloqueada && uiState.puedeRestarTransito) {
-                                    MaterialTheme.colorScheme.primary
-                                } else {
-                                    MaterialTheme.colorScheme.outlineVariant
-                                }
-                            ),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text("Restar (-1)")
-                        }
-                        Button(
-                            onClick = { viewModel.incrementarTransito() },
-                            enabled = !estaPuertaBloqueada,
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text("Sumar (+1)")
-                        }
-                    }
-                }
-            }
-            Card(
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "Cliente (Compra)",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = "Selecciona rango etario y compañía antes de sumar.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                            )
-                        }
-                        Text(
-                            text = "${uiState.cantidadClientes}",
-                            style = MaterialTheme.typography.headlineLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                    if (uiState.compania in listOf("Pareja", "Con niños", "Grupo")) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "Personas:",
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = FontWeight.Bold
-                            )
-                            listOf(1, 2, 3, 4).forEach { cant ->
-                                FilterChip(
-                                    selected = cantidadGrupo == cant,
-                                    onClick = { cantidadGrupo = cant },
-                                    colors = coloresChip,
-                                    label = { Text(if (cant == 4) "+4" else "+$cant") }
-                                )
-                            }
-                        }
-                    }
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        OutlinedButton(
-                            onClick = { viewModel.decrementarClientes() },
-                            enabled = !estaPuertaBloqueada && uiState.puedeRestarCliente,
-                            border = BorderStroke(
-                                1.dp,
-                                if (!estaPuertaBloqueada && uiState.puedeRestarCliente) {
-                                    MaterialTheme.colorScheme.primary
-                                } else {
-                                    MaterialTheme.colorScheme.outlineVariant
-                                }
-                            ),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text("Restar (-1)")
-                        }
-                        Button(
-                            onClick = {
-                                viewModel.incrementarClientes() // Si deseas sumar cantidadGrupo, o usar viewModel.incrementarClientes()
-                                cantidadGrupo = 1
-                            },
-                            enabled = !estaPuertaBloqueada,
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text("Sumar (+$cantidadGrupo)")
-                        }
-                    }
-                }
-            }
             Card(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
@@ -316,7 +212,7 @@ fun FormularioConteoScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        text = "Rango Etario Estimado *",
+                        text = "1. Rango Etario Estimado *",
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold
                     )
@@ -344,6 +240,7 @@ fun FormularioConteoScreen(
                     }
                 }
             }
+
             Card(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
@@ -354,7 +251,7 @@ fun FormularioConteoScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        text = "Tipo de Compañía *",
+                        text = "2. Tipo de Compañía *",
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold
                     )
@@ -410,6 +307,138 @@ fun FormularioConteoScreen(
                 }
             }
 
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text(
+                        text = "3. Control de Salida (Boleta / Tránsito)",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    if (!seleccionCompleta && !estaPuertaBloqueada) {
+                        Text(
+                            text = "Selecciona rango etario y compañía para habilitar el escaneo o el registro de tránsito.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+
+                    Button(
+                        onClick = {
+                            if (viewModel.puedeRegistrarSalida()) {
+                                if (tienePermisoCamara) {
+                                    mostrarEscaner = true
+                                } else {
+                                    launcherPermisoCamara.launch(Manifest.permission.CAMERA)
+                                }
+                            }
+                        },
+                        enabled = puedeOperarSalida,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Text(
+                            text = "Escanear Boleta (Validar Cliente)",
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+
+                    OutlinedButton(
+                        onClick = { viewModel.registrarSinBoleta() },
+                        enabled = puedeOperarSalida,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(46.dp),
+                        shape = RoundedCornerShape(10.dp),
+                        border = BorderStroke(
+                            1.dp,
+                            if (puedeOperarSalida) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.outlineVariant
+                            }
+                        )
+                    ) {
+                        Text(
+                            text = "Sin Boleta (Sumar a Tránsito)",
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            text = "Clientes",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "Boleta válida",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                        )
+                        Text(
+                            text = "${uiState.cantidadClientes}",
+                            style = MaterialTheme.typography.headlineMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            text = "Tránsito",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "Sin boleta / inválida",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                        )
+                        Text(
+                            text = "${uiState.cantidadTransito}",
+                            style = MaterialTheme.typography.headlineMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.secondary
+                        )
+                    }
+                }
+            }
+
             Spacer(modifier = Modifier.height(4.dp))
 
             Button(
@@ -421,6 +450,16 @@ fun FormularioConteoScreen(
                 shape = MaterialTheme.shapes.medium
             ) {
                 Text(text = "Enviar Registro de Aforo", style = MaterialTheme.typography.titleMedium)
+            }
+
+            if (mostrarEscaner && !estaPuertaBloqueada) {
+                EscanerBoletaDialog(
+                    onCodigoDetectado = { codigo ->
+                        mostrarEscaner = false
+                        viewModel.procesarEscaneoBoleta(codigo)
+                    },
+                    onCerrar = { mostrarEscaner = false }
+                )
             }
 
             if (estaPuertaBloqueada) {
@@ -437,6 +476,126 @@ fun FormularioConteoScreen(
             }
 
             Spacer(modifier = Modifier.height(24.dp))
+        }
+    }
+}
+
+@OptIn(ExperimentalGetImage::class)
+@Composable
+private fun EscanerBoletaDialog(
+    onCodigoDetectado: (String) -> Unit,
+    onCerrar: () -> Unit
+) {
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val cameraExecutor = remember { Executors.newSingleThreadExecutor() }
+    val barcodeScanner = remember { BarcodeScanning.getClient() }
+    var yaProcesado by remember { mutableStateOf(false) }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            barcodeScanner.close()
+            cameraExecutor.shutdown()
+        }
+    }
+
+    Dialog(onDismissRequest = onCerrar) {
+        Card(
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = "Escanear Boleta",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "Apunta la cámara al código de barras o QR de la boleta.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                )
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(260.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                ) {
+                    AndroidView(
+                        modifier = Modifier.fillMaxSize(),
+                        factory = { ctx ->
+                            val previewView = PreviewView(ctx)
+                            val cameraProviderFuture = ProcessCameraProvider.getInstance(ctx)
+
+                            cameraProviderFuture.addListener({
+                                val cameraProvider = cameraProviderFuture.get()
+                                val preview = Preview.Builder().build().also {
+                                    it.setSurfaceProvider(previewView.surfaceProvider)
+                                }
+
+                                val analysis = ImageAnalysis.Builder()
+                                    .setTargetResolution(Size(1280, 720))
+                                    .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                                    .build()
+                                    .also { imageAnalysis ->
+                                        imageAnalysis.setAnalyzer(cameraExecutor) { imageProxy: ImageProxy ->
+                                            val mediaImage = imageProxy.image
+                                            if (mediaImage != null && !yaProcesado) {
+                                                val image = InputImage.fromMediaImage(
+                                                    mediaImage,
+                                                    imageProxy.imageInfo.rotationDegrees
+                                                )
+                                                barcodeScanner.process(image)
+                                                    .addOnSuccessListener { barcodes ->
+                                                        val rawValue = barcodes
+                                                            .firstOrNull { !it.rawValue.isNullOrBlank() }
+                                                            ?.rawValue
+
+                                                        if (!rawValue.isNullOrBlank() && !yaProcesado) {
+                                                            yaProcesado = true
+                                                            onCodigoDetectado(rawValue)
+                                                        }
+                                                    }
+                                                    .addOnCompleteListener {
+                                                        imageProxy.close()
+                                                    }
+                                            } else {
+                                                imageProxy.close()
+                                            }
+                                        }
+                                    }
+
+                                try {
+                                    cameraProvider.unbindAll()
+                                    cameraProvider.bindToLifecycle(
+                                        lifecycleOwner,
+                                        CameraSelector.DEFAULT_BACK_CAMERA,
+                                        preview,
+                                        analysis
+                                    )
+                                } catch (_: Exception) {
+                                }
+                            }, ContextCompat.getMainExecutor(ctx))
+
+                            previewView
+                        }
+                    )
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(onClick = onCerrar) {
+                        Text("Cancelar")
+                    }
+                }
+            }
         }
     }
 }
