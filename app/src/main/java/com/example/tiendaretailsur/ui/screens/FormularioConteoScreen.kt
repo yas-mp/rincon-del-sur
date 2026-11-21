@@ -486,16 +486,16 @@ private fun EscanerBoletaDialog(
     onCodigoDetectado: (String) -> Unit,
     onCerrar: () -> Unit
 ) {
-    val context = LocalContext.current
-    val lifecycleOwner = LocalLifecycleOwner.current
-    val cameraExecutor = remember { Executors.newSingleThreadExecutor() }
-    val barcodeScanner = remember { BarcodeScanning.getClient() }
-    var yaProcesado by remember { mutableStateOf(false) }
+    val contex = LocalContext.current
+    val cicloVida = LocalLifecycleOwner.current
+    val ejecutorCamara = remember { Executors.newSingleThreadExecutor() }
+    val lectorCodigos = remember { BarcodeScanning.getClient() }
+    var codigoYaLeido by remember { mutableStateOf(false) }
 
     DisposableEffect(Unit) {
         onDispose {
-            barcodeScanner.close()
-            cameraExecutor.shutdown()
+            lectorCodigos.close()
+            ejecutorCamara.shutdown()
         }
     }
 
@@ -528,61 +528,61 @@ private fun EscanerBoletaDialog(
                 ) {
                     AndroidView(
                         modifier = Modifier.fillMaxSize(),
-                        factory = { ctx ->
-                            val previewView = PreviewView(ctx)
-                            val cameraProviderFuture = ProcessCameraProvider.getInstance(ctx)
+                        factory = { vistaContexto ->
+                            val vistaPreviaCamara = PreviewView(vistaContexto)
+                            val proveedorCamaraFuture = ProcessCameraProvider.getInstance(vistaContexto)
 
-                            cameraProviderFuture.addListener({
-                                val cameraProvider = cameraProviderFuture.get()
-                                val preview = Preview.Builder().build().also {
-                                    it.setSurfaceProvider(previewView.surfaceProvider)
+                            proveedorCamaraFuture.addListener({
+                                val proveedorCamara = proveedorCamaraFuture.get()
+                                val vistaPrevia = Preview.Builder().build().also {
+                                    it.setSurfaceProvider(vistaPreviaCamara.surfaceProvider)
                                 }
 
-                                val analysis = ImageAnalysis.Builder()
+                                val analisisImagen = ImageAnalysis.Builder()
                                     .setTargetResolution(Size(1280, 720))
                                     .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                                     .build()
-                                    .also { imageAnalysis ->
-                                        imageAnalysis.setAnalyzer(cameraExecutor) { imageProxy: ImageProxy ->
-                                            val mediaImage = imageProxy.image
-                                            if (mediaImage != null && !yaProcesado) {
-                                                val image = InputImage.fromMediaImage(
-                                                    mediaImage,
-                                                    imageProxy.imageInfo.rotationDegrees
+                                    .also { analizador ->
+                                        analizador.setAnalyzer(ejecutorCamara) { cuadroImagen: ImageProxy ->
+                                            val imagenCamara = cuadroImagen.image
+                                            if (imagenCamara != null && !codigoYaLeido) {
+                                                val imagenMlKit = InputImage.fromMediaImage(
+                                                    imagenCamara,
+                                                    cuadroImagen.imageInfo.rotationDegrees
                                                 )
-                                                barcodeScanner.process(image)
-                                                    .addOnSuccessListener { barcodes ->
-                                                        val rawValue = barcodes
+                                                lectorCodigos.process(imagenMlKit)
+                                                    .addOnSuccessListener { codigosDetectados ->
+                                                        val contenidoCodigo = codigosDetectados
                                                             .firstOrNull { !it.rawValue.isNullOrBlank() }
                                                             ?.rawValue
 
-                                                        if (!rawValue.isNullOrBlank() && !yaProcesado) {
-                                                            yaProcesado = true
-                                                            onCodigoDetectado(rawValue)
+                                                        if (!contenidoCodigo.isNullOrBlank() && !codigoYaLeido) {
+                                                            codigoYaLeido = true
+                                                            onCodigoDetectado(contenidoCodigo)
                                                         }
                                                     }
                                                     .addOnCompleteListener {
-                                                        imageProxy.close()
+                                                        cuadroImagen.close()
                                                     }
                                             } else {
-                                                imageProxy.close()
+                                                cuadroImagen.close()
                                             }
                                         }
                                     }
 
                                 try {
-                                    cameraProvider.unbindAll()
-                                    cameraProvider.bindToLifecycle(
-                                        lifecycleOwner,
+                                    proveedorCamara.unbindAll()
+                                    proveedorCamara.bindToLifecycle(
+                                        cicloVida,
                                         CameraSelector.DEFAULT_BACK_CAMERA,
-                                        preview,
-                                        analysis
+                                        vistaPrevia,
+                                        analisisImagen
                                     )
                                 } catch (_: Exception) {
                                 }
-                            }, ContextCompat.getMainExecutor(ctx))
+                            }, ContextCompat.getMainExecutor(vistaContexto))
 
-                            previewView
+                            vistaPreviaCamara
                         }
                     )
                 }
