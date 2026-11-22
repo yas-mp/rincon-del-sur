@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">TiendaRetailSur</string>
+    <string name="app_name">RinconDelSur</string>
     //Pantalla creacion cuenta
     <string name="creacion_cuenta">Crear cuenta</string>
     <string name="titulo_registro2">REGISTRATE</string>

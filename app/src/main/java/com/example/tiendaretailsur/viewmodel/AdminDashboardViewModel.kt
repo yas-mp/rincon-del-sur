@@ -23,6 +23,21 @@ class AdminDashboardViewModel : ViewModel() {
         cargarDatosDashboard()
     }
 
+    private fun extraerClaveHora(horaRaw: String): Pair<Int, String> {
+        val limpia = horaRaw.trim()
+        if (limpia.isBlank()) return 99 to "Sin hora"
+
+        val digitos = limpia.takeWhile { it.isDigit() }
+        val horaNum = digitos.toIntOrNull()
+
+        return if (horaNum != null && horaNum in 0..23) {
+            val etiqueta = "${horaNum.toString().padStart(2, '0')}:00"
+            horaNum to etiqueta
+        } else {
+            99 to limpia
+        }
+    }
+
     fun cargarDatosDashboard() {
         viewModelScope.launch {
             _uiState.update { it.copy(estaCargando = true) }
@@ -44,20 +59,12 @@ class AdminDashboardViewModel : ViewModel() {
             }
 
             val flujoPorHora = listaConteos
-                .groupBy { conteo ->
-                    val horaPrefix = conteo.hora
-                    if (horaPrefix.length == 2 && horaPrefix.all { it.isDigit() }) {
-                        "$horaPrefix:00"
-                    } else {
-                        conteo.hora.ifBlank { "Sin hora" }
-                    }
-                }
-                .mapValues { (_, conteosHora) ->
-                    conteosHora.sumOf { it.cantidadClientes + it.cantidadTransito }
-                }
-                .toSortedMap()
-                .map { (hora, total) ->
-                    DatoGrafico(etiqueta = hora, valor = total)
+                .groupBy { extraerClaveHora(it.hora) }
+                .toSortedMap(compareBy { it.first })
+                .map { (_, conteosHora) ->
+                    val etiqueta = extraerClaveHora(conteosHora.first().hora).second
+                    val totalHora = conteosHora.sumOf { it.cantidadClientes + it.cantidadTransito }
+                    DatoGrafico(etiqueta = etiqueta, valor = totalHora)
                 }
 
             val totalClientes = listaConteos.sumOf { it.cantidadClientes }

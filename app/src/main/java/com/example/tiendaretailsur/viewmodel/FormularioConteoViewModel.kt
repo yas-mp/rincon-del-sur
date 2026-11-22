@@ -207,10 +207,13 @@ class FormularioConteoViewModel(
                     }
                 }
 
+                val horaActual = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
+                val horaFormateada = "${horaActual.toString().padStart(2, '0')}:00"
+
                 val exito = conteoRepository.registrar(
                     uiState = estado,
                     observador = nombreObservador,
-                    hora = "12h",
+                    hora = horaFormateada,
                     usuarioId = if (idUsuario != -1L) idUsuario else null
                 )
                 if (exito) {
