@@ -180,6 +180,16 @@ class FormularioConteoViewModel(
 
         val estado = _uiState.value
 
+        if (estado.cantidadTransito <= 0 && estado.cantidadClientes <= 0) {
+            _uiState.update {
+                it.copy(
+                    envioExitoso = false,
+                    mensajeFeedback = "Registra al menos 1 cliente o 1 persona en tránsito antes de enviar"
+                )
+            }
+            return
+        }
+
         viewModelScope.launch {
             try {
                 val idUsuario = gestorSesion.obtenerIdUsuarioLogueado()
@@ -204,6 +214,7 @@ class FormularioConteoViewModel(
                     usuarioId = if (idUsuario != -1L) idUsuario else null
                 )
                 if (exito) {
+                    boletasEscaneadas.clear()
                     _uiState.update {
                         FormularioConteoUiState(
                             puertaAcceso = it.puertaAcceso,
@@ -211,10 +222,20 @@ class FormularioConteoViewModel(
                             mensajeFeedback = "Registro de aforo enviado correctamente"
                         )
                     }
+                } else {
+                    _uiState.update {
+                        it.copy(
+                            envioExitoso = false,
+                            mensajeFeedback = "No se pudo guardar el registro en el servidor"
+                        )
+                    }
                 }
             } catch (_: Exception) {
                 _uiState.update {
-                    it.copy(mensajeFeedback = "Error al enviar el registro")
+                    it.copy(
+                        envioExitoso = false,
+                        mensajeFeedback = "Error al enviar el registro"
+                    )
                 }
             }
         }

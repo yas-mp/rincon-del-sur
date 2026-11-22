@@ -1,7 +1,7 @@
 package com.example.tiendaretailsur.model
 
 data class FormularioConteoUiState(
-    val puertaAcceso: String = "A1",
+    val puertaAcceso: String = "",
     val cantidadTransito: Int = 0,
     val cantidadClientes: Int = 0,
     val rangoEtario: String = "",
