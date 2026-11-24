@@ -68,7 +68,7 @@ class FormularioRegistroViewModel : ViewModel() {
             !estado.nombre.matches(Regex("^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\\s]+$")) -> "El nombre solo puede contener letras y espacios"
             else -> null
         }
-        val errorCorreo = if (!Patterns.EMAIL_ADDRESS.matcher(estado.correo).matches()) {
+        val errorCorreo = if (!estado.correo.matches(Regex("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$"))) {
             "Ingrese un correo válido"
         } else null
         val errorTelefono = when {

@@ -12,11 +12,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-class LoginViewModel(
-    application: Application,
-    private val usuarioRepository: UsuarioRepository = UsuarioRepository(),
-    private val gestorSesion: GestorSesion? = GestorSesion(application)
-) : AndroidViewModel(application) {
+class LoginViewModel(application: Application) : AndroidViewModel(application) {
+
+    private val usuarioRepository = UsuarioRepository()
+    private val gestorSesion = GestorSesion(application)
 
     private val _uiState = MutableStateFlow(LoginUiState())
     val uiState: StateFlow<LoginUiState> = _uiState.asStateFlow()
@@ -72,7 +71,7 @@ class LoginViewModel(
                 val esAdmin = usuario.perfil.uppercase() in listOf(
                     "P-01", "JEFA_TIENDA", "JEFA DE TIENDA", "P-02", "SUBGERENTE", "P-03", "SUPERVISOR"
                 )
-                gestorSesion?.guardarSesion(
+                gestorSesion.guardarSesion(
                     idUsuario = idNumerico,
                     correo = usuario.correo,
                     nombre = usuario.nombreCompleto,

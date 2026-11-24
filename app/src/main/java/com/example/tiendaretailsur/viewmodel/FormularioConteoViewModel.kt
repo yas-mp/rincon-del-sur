@@ -136,8 +136,8 @@ class FormularioConteoViewModel(
         if (boletasEscaneadas.contains(codigoLimpio)) {
             _uiState.update {
                 it.copy(
-                    rangoEtario = "",
-                    compania = "",
+                    rangoEtario = it.rangoEtario,
+                    compania = it.compania,
                     envioExitoso = false,
                     mensajeFeedback = "La boleta $codigoLimpio ya fue escaneada"
                 )
@@ -149,8 +149,8 @@ class FormularioConteoViewModel(
         _uiState.update {
             it.copy(
                 cantidadClientes = it.cantidadClientes + 1,
-                rangoEtario = "",
-                compania = "",
+                rangoEtario = it.rangoEtario,
+                compania = it.compania,
                 envioExitoso = false,
                 mensajeFeedback = "Boleta válida ($codigoLimpio) -> +1 Cliente"
             )

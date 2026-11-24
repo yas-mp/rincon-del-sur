@@ -55,9 +55,7 @@ class RecuperarContrasenaViewModel : ViewModel() {
 
         viewModelScope.launch {
             try {
-                // Valida que el colaborador exista y tenga pregunta configurada
                 usuarioRepository.obtenerPreguntaSeguridad(identificador)
-                // Carga el catálogo completo de preguntas desde el backend
                 val preguntasDisponibles = usuarioRepository.listarPreguntasSeguridad()
 
                 _uiState.update {
@@ -65,7 +63,7 @@ class RecuperarContrasenaViewModel : ViewModel() {
                         pasoActual = PasoRecuperacion.PREGUNTAS_SEGURIDAD,
                         correoUsuarioEncontrado = identificador,
                         listaPreguntas = preguntasDisponibles,
-                        pregunta1 = "", // Se deja vacía para que el usuario elija la suya
+                        pregunta1 = "",
                         errorPregunta1 = null,
                         errorUsuario = null
                     )
