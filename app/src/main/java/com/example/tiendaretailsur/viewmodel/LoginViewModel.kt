@@ -12,10 +12,11 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-class LoginViewModel(application: Application) : AndroidViewModel(application) {
-
-    private val usuarioRepository = UsuarioRepository()
-    private val gestorSesion = GestorSesion(application)
+class LoginViewModel(
+    application: Application,
+    private val usuarioRepository: UsuarioRepository = UsuarioRepository(),
+    private val gestorSesion: GestorSesion? = GestorSesion(application)
+) : AndroidViewModel(application) {
 
     private val _uiState = MutableStateFlow(LoginUiState())
     val uiState: StateFlow<LoginUiState> = _uiState.asStateFlow()
@@ -51,12 +52,14 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, errorCorreo = null, errorContrasena = null) }
             try {
                 val usuario = usuarioRepository.iniciarSesion(correoOIdentificador, contrasena)
 
                 if (!usuario.activo) {
                     _uiState.update {
                         it.copy(
+                            isLoading = false,
                             loginExitoso = false,
                             usuarioAutenticado = null,
                             errorContrasena = "Tu cuenta se encuentra deshabilitada. Contacta a Administración."
@@ -65,12 +68,11 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
                     return@launch
                 }
 
-                // Guarda el ID y correo en GestorSesion para toda la app
                 val idNumerico = usuario.codigo.toLongOrNull() ?: -1L
                 val esAdmin = usuario.perfil.uppercase() in listOf(
                     "P-01", "JEFA_TIENDA", "JEFA DE TIENDA", "P-02", "SUBGERENTE", "P-03", "SUPERVISOR"
                 )
-                gestorSesion.guardarSesion(
+                gestorSesion?.guardarSesion(
                     idUsuario = idNumerico,
                     correo = usuario.correo,
                     nombre = usuario.nombreCompleto,
@@ -79,6 +81,7 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
                 )
                 _uiState.update {
                     it.copy(
+                        isLoading = false,
                         loginExitoso = true,
                         usuarioAutenticado = usuario,
                         errorCorreo = null,
@@ -89,6 +92,7 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
             } catch (e: Exception) {
                 _uiState.update {
                     it.copy(
+                        isLoading = false,
                         loginExitoso = false,
                         errorContrasena = e.localizedMessage ?: "Credenciales incorrectas o usuario no encontrado"
                     )

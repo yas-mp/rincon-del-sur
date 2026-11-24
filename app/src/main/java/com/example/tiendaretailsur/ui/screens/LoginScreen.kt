@@ -82,7 +82,6 @@ fun LoginScreen(
                     duration = SnackbarDuration.Indefinite
                 )
             }
-            kotlinx.coroutines.delay(1000) // Duración exacta: 1.3 segundos (ajusta a gusto)
             snackbarHostState.currentSnackbarData?.dismiss()
             job.cancel()
             onLoginSuccess(uiState.usuarioAutenticado!!)

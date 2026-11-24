@@ -7,7 +7,7 @@ import kotlin.jvm.java
 
 object RetrofitClient {
 
-    private const val URL_GATEWAY = "https://4n1b70n0-8080.brs.devtunnels.ms/"
+    private const val URL_GATEWAY = "https://htf54zfs-8080.brs.devtunnels.ms/"
     private val retrofit: Retrofit by lazy {
         Retrofit.Builder()
             .baseUrl(URL_GATEWAY)
