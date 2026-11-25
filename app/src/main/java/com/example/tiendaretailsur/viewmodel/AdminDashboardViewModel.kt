@@ -12,9 +12,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-class AdminDashboardViewModel : ViewModel() {
-
-    private val conteoRepository = ConteoRepository()
+class AdminDashboardViewModel(
+    private val conteoRepository: ConteoRepository = ConteoRepository()
+) : ViewModel(){
 
     private val _uiState = MutableStateFlow(AdminDashboardUiState())
     val uiState: StateFlow<AdminDashboardUiState> = _uiState.asStateFlow()
