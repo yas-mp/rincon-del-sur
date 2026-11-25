@@ -150,11 +150,12 @@ class UsuarioRepository (
         }
     }
 
+    @Suppress("UNCHECKED_CAST")
     private suspend fun <T> llamar(peticion: suspend () -> Response<T>): T {
         try {
             val response = peticion()
-            if (response.isSuccessful && response.body() != null) {
-                return response.body()!!
+            if (response.isSuccessful) {
+                return (response.body() ?: Unit) as T
             } else {
                 val errorBody = response.errorBody()?.string()
                 val mensaje = try {

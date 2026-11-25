@@ -124,8 +124,6 @@ class FormularioConteoViewModel(
             _uiState.update {
                 it.copy(
                     cantidadTransito = it.cantidadTransito + 1,
-                    rangoEtario = "",
-                    compania = "",
                     envioExitoso = false,
                     mensajeFeedback = "Formato de boleta no válido -> +1 Tránsito"
                 )
@@ -163,8 +161,6 @@ class FormularioConteoViewModel(
         _uiState.update {
             it.copy(
                 cantidadTransito = it.cantidadTransito + 1,
-                rangoEtario = "",
-                compania = "",
                 envioExitoso = false,
                 mensajeFeedback = "Salida sin boleta (+1 Tránsito)"
             )
